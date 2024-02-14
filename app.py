@@ -58,10 +58,20 @@ def get_prospectus(page_numbers):
     page_numbers = [int(page) for page in page_numbers.split(',')]
     data = scrape_sebon_data(page_numbers)
     
-    # Write data to the prospectus.json file
-    os.makedirs(os.path.dirname(PROSPECTUS_FILE_PATH), exist_ok=True)  # Create directories if they don't exist
-    with open(PROSPECTUS_FILE_PATH, 'w', encoding='utf-8') as f:
-        json.dump(data, f, ensure_ascii=False, indent=4)
+    # Define the path for prospectus.json
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    prospectus_file_path = os.path.join(base_dir, 'hsmmarketdata', 'response', 'prospectus.json')
+    
+    # Ensure the directory exists
+    os.makedirs(os.path.dirname(prospectus_file_path), exist_ok=True)
+    
+    # Attempt to write the data to prospectus.json
+    try:
+        with open(prospectus_file_path, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=4)
+        print("Data successfully written to file:", prospectus_file_path)
+    except Exception as e:
+        print(f"Error writing to file: {e}")
     
     return jsonify(data)
 

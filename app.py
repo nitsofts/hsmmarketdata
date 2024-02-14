@@ -1,14 +1,22 @@
-from flask import Flask, request, jsonify
+import logging
+from base64 import b64encode
 import requests
-from bs4 import BeautifulSoup
-import json
+from flask import Flask
 import os
+import json
+import time
+from datetime import datetime
+
+# Basic logging setup for debugging
+logging.basicConfig(level=logging.INFO)
 
 app = Flask(__name__)
 
-# Define the path where the prospectus.json file will be saved
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))  # Gets the directory where the script runs
-PROSPECTUS_FILE_PATH = os.path.join(BASE_DIR, 'hsmmarketdata', 'response', 'prospectus.json')
+# Configuration for GitHub API
+GITHUB_TOKEN = os.environ.get('GITHUB_TOKEN')  # GitHub API token
+REPO_NAME = 'nitsofts/hsmmarketdata'  # Repository name on GitHub
+FILE_PATH = 'response/prospectus.json'  # Path to the file in the repository
+BRANCH = 'main'  # Branch to update in the repository
 
 def get_file_size(url):
     try:
@@ -53,27 +61,50 @@ def scrape_sebon_data(page_numbers):
 
     return combined_data
 
+def update_prospectus_on_github(data):
+    url = f'https://api.github.com/repos/{REPO_NAME}/contents/{FILE_PATH}'
+    headers = {
+        'Authorization': f'token {GITHUB_TOKEN}',
+        'Accept': 'application/vnd.github.v3+json'
+    }
+
+    # Fetch the current SHA to update the file instead of creating a new one
+    response = requests.get(url, headers=headers)
+    sha = response.json().get('sha') if response.status_code == 200 else None
+
+    # Prepare the content
+    content = b64encode(json.dumps(data, ensure_ascii=False).encode('utf-8')).decode('utf-8')
+    update_data = {
+        'message': f'Update {FILE_PATH}',
+        'content': content,
+        'branch': BRANCH,
+    }
+    if sha:  # If file exists, include the SHA to update; otherwise, create new file
+        update_data['sha'] = sha
+
+    # Send the request to update the file
+    put_response = requests.put(url, headers=headers, json=update_data)
+    if put_response.status_code in [200, 201]:
+        logging.info(f"Successfully updated {FILE_PATH} in repository.")
+        return True, 'File updated successfully'
+    else:
+        logging.error(f"Failed to update {FILE_PATH}. Response: {put_response.text}")
+        return False, put_response.text
+
+
 @app.route('/get_prospectus/<page_numbers>', methods=['GET'])
 def get_prospectus(page_numbers):
     page_numbers = [int(page) for page in page_numbers.split(',')]
     data = scrape_sebon_data(page_numbers)
-    
-    # Define the path for prospectus.json
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    prospectus_file_path = os.path.join(base_dir, 'hsmmarketdata', 'response', 'prospectus.json')
-    
-    # Ensure the directory exists
-    os.makedirs(os.path.dirname(prospectus_file_path), exist_ok=True)
-    
-    # Attempt to write the data to prospectus.json
-    try:
-        with open(prospectus_file_path, 'w', encoding='utf-8') as f:
-            json.dump(data, f, ensure_ascii=False, indent=4)
-        print("Data successfully written to file:", prospectus_file_path)
-    except Exception as e:
-        print(f"Error writing to file: {e}")
-    
-    return jsonify(data)
+
+    success, message = update_prospectus_on_github(data)
+    if success:
+        response = {'success': True, 'message': 'Prospectus data updated on GitHub.'}
+        return jsonify(response), 200
+    else:
+        response = {'success': False, 'message': f'Failed to update prospectus data on GitHub. Error: {message}'}
+        return jsonify(response), 500
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8080)

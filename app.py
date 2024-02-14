@@ -2,13 +2,14 @@ from flask import Flask, request, jsonify
 import requests
 from bs4 import BeautifulSoup
 import json
+import os
 
 app = Flask(__name__)
 
+# Define the path where the prospectus.json file will be saved
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))  # Gets the directory where the script runs
+PROSPECTUS_FILE_PATH = os.path.join(BASE_DIR, 'hsmmarketdata', 'response', 'prospectus.json')
 
-# Prospectus Data - START
-# Source: https://www.sebon.gov.np/prospectus?page={page numbers}
-# Request URL: https://hsmmarketdata.onrende.com/get_prospectus/1 or 1,2 or 1,2,3
 def get_file_size(url):
     try:
         response = requests.head(url)
@@ -34,7 +35,6 @@ def scrape_sebon_data(page_numbers):
             for row in table_rows:
                 row_data = row.find_all('td')
                 if len(row_data) == 4:
-                    # Determine which URL to use for file size calculation
                     file_url = row_data[3].find('a').get('href', '') if row_data[3].find('a') else row_data[2].find('a').get('href', '')
                     file_size = get_file_size(file_url) if file_url else "N/A"
 
@@ -52,13 +52,17 @@ def scrape_sebon_data(page_numbers):
             print(f"Failed to retrieve page {page_number}. Status code:", response.status_code)
 
     return combined_data
-# Prospectus Data - END
-
 
 @app.route('/get_prospectus/<page_numbers>', methods=['GET'])
 def get_prospectus(page_numbers):
     page_numbers = [int(page) for page in page_numbers.split(',')]
     data = scrape_sebon_data(page_numbers)
+    
+    # Write data to the prospectus.json file
+    os.makedirs(os.path.dirname(PROSPECTUS_FILE_PATH), exist_ok=True)  # Create directories if they don't exist
+    with open(PROSPECTUS_FILE_PATH, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=4)
+    
     return jsonify(data)
 
 if __name__ == '__main__':

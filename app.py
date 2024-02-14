@@ -93,10 +93,12 @@ def update_prospectus_on_github(data):
         return False, put_response.text
 
 
-@app.route('/get_prospectus/<page_numbers>', methods=['GET'])
-def get_prospectus(page_numbers):
-    page_numbers = [int(page) for page in page_numbers.split(',')]
-    data = scrape_sebon_data(page_numbers)
+@app.route('/get_prospectus', methods=['GET'])
+def get_prospectus():
+    # Fetch 'pages' from query parameters, default to '1,2,3,4,5'
+    pages_str = request.args.get('pages', '1,2,3,4,5')
+    pages = [int(page) for page in pages_str.split(',')]
+    data = scrape_sebon_data(pages)
 
     success, message = update_prospectus_on_github(data)
     if success:
@@ -105,6 +107,7 @@ def get_prospectus(page_numbers):
     else:
         response = {'success': False, 'message': f'Failed to update prospectus data on GitHub. Error: {message}'}
         return jsonify(response), 500
+
 
 
 if __name__ == '__main__':

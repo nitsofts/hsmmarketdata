@@ -1,59 +1,65 @@
 from flask import Flask, request, jsonify
+import requests
+from bs4 import BeautifulSoup
+import json
 
 app = Flask(__name__)
 
-@app.route('/add', methods=['GET', 'POST'])
-def add_numbers():
-    if request.method == 'GET':
-        num1 = float(request.args.get('num1', 0))
-        num2 = float(request.args.get('num2', 0))
-    elif request.method == 'POST':
-        data = request.get_json()
-        num1 = float(data.get('num1', 0))
-        num2 = float(data.get('num2', 0))
 
-    result = num1 + num2
-    response = {'result': result}
+# Prospectus Data - START
+# Source: https://www.sebon.gov.np/prospectus?page={page numbers}
+# Request URL: https://hsmmarketdata.onrende.com/get_prospectus/1 or 1,2 or 1,2,3
+def get_file_size(url):
+    try:
+        response = requests.head(url)
+        file_size_bytes = int(response.headers.get('content-length', 0))
+        file_size_mb = round(file_size_bytes / (1024 * 1024), 2)  # Convert bytes to MB
+        return file_size_mb
+    except Exception:
+        return "N/A"  # Return "N/A" if size can't be calculated
 
-    return jsonify(response)
+def scrape_sebon_data(page_numbers):
+    combined_data = []
 
-@app.route('/buy', methods=['GET'])
-def buy():
-    units = float(request.args.get('units', 0))
-    buying_price = float(request.args.get('buying_price', 0))
+    for page_number in page_numbers:
+        url = f"https://www.sebon.gov.np/prospectus?page={page_number}"
+        response = requests.get(url)
 
-    share_amount = round(units * buying_price, 2)
-    sebon_fee = round((0.015 / 100) * share_amount, 2)
+        if response.status_code == 200:
+            soup = BeautifulSoup(response.content, 'html.parser')
+            table = soup.find('table', class_='table')
+            table_rows = table.select('tbody tr')
+            data_list = []
 
-    if share_amount <= 50000:
-        broker_commission = round(max(0.004 * share_amount, 10), 2)
-    elif 50001 <= share_amount <= 500000:
-        broker_commission = round(0.0037 * share_amount, 2)
-    elif 500001 <= share_amount <= 2000000:
-        broker_commission = round(0.0034 * share_amount, 2)
-    elif 2000001 <= share_amount <= 10000000:
-        broker_commission = round(0.003 * share_amount, 2)
-    else:
-        broker_commission = round(0.0027 * share_amount, 2)
+            for row in table_rows:
+                row_data = row.find_all('td')
+                if len(row_data) == 4:
+                    # Determine which URL to use for file size calculation
+                    file_url = row_data[3].find('a').get('href', '') if row_data[3].find('a') else row_data[2].find('a').get('href', '')
+                    file_size = get_file_size(file_url) if file_url else "N/A"
 
-    dp_charge = 25
-    total_paying_amount = round(share_amount + sebon_fee + broker_commission + dp_charge, 2)
-    cost_per_share = round(total_paying_amount / units, 2)
-    price_per_share = round(buying_price + (broker_commission / units), 2)
-    total_charges = round(sebon_fee + broker_commission + dp_charge, 2)
+                    data = {
+                        "title": row_data[0].get_text(strip=True),
+                        "date": row_data[1].get_text(strip=True),
+                        "english": row_data[2].find('a').get('href', '') if row_data[2].find('a') else '',
+                        "nepali": row_data[3].find('a').get('href', '') if row_data[3].find('a') else '',
+                        "fileSize": file_size
+                    }
+                    data_list.append(data)
+
+            combined_data.extend(data_list)
+        else:
+            print(f"Failed to retrieve page {page_number}. Status code:", response.status_code)
+
+    return combined_data
+# Prospectus Data - END
 
 
-    response_dict = [{
-        'Share Amount': share_amount,
-        'Sebon Fee': sebon_fee,
-        'Broker Commission': broker_commission,
-        'DP Charge': dp_charge,
-        'Price Per Share': price_per_share,
-        'Total Charges': total_charges,
-        'Payable Amount': total_paying_amount
-    }]
-
-    return jsonify(response_dict)
+@app.route('/get_prospectus/<page_numbers>', methods=['GET'])
+def get_prospectus(page_numbers):
+    page_numbers = [int(page) for page in page_numbers.split(',')]
+    data = scrape_sebon_data(page_numbers)
+    return jsonify(data)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8080)

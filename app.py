@@ -1,7 +1,7 @@
 import logging
 from base64 import b64encode
 import requests
-from flask import Flask
+from flask import Flask, jsonify  # Make sure jsonify is imported here
 import os
 import json
 import time

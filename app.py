@@ -16,6 +16,7 @@ GITHUB_TOKEN = os.environ.get('GITHUB_TOKEN')  # GitHub API token
 REPO_NAME = 'nitsofts/hsmmarketdata'  # Repository name on GitHub
 BRANCH = 'main'  # Branch to update in the repository
 
+# Prospectus Scraping Functions
 def scrape_prospectus(page_numbers):
     combined_data = []
     
@@ -52,6 +53,7 @@ def scrape_prospectus(page_numbers):
             logging.error(f"Failed to retrieve page {page_number}. Status code: {response.status_code}")
     return combined_data
 
+# CDSC Scraping Functions
 def scrape_cdsc_data():
     # Define the URL of the website
     url = "https://www.cdsc.com.np/"
@@ -91,6 +93,9 @@ def scrape_cdsc_data():
     
     return data
 
+
+# This function is for writing updated data on github page
+# GitHub Update Functions
 def update_data_on_github(file_path, data):
     url = f'https://api.github.com/repos/{REPO_NAME}/contents/{file_path}'
     headers = {
@@ -116,7 +121,9 @@ def update_data_on_github(file_path, data):
         return False, put_response.text
 
 
-# GET METHODS: ALL ENDPOINTS
+
+
+# API Endpoints to make requests
 # Prospectus: /get_prospectus for all 5 pages (1,2,3,4,5)
 # Prospectus: /get_prospectus?pages=1,2 for specific set of pages
 @app.route('/get_prospectus', methods=['GET'])
@@ -142,6 +149,19 @@ def get_cdsc_data():
         response = {'success': True, 'message': 'CDSC data updated on GitHub.'}
     else:
         response = {'success': False, 'message': f'Failed to update CDSC data on GitHub. Error: {message}'}
+    return jsonify(response)
+
+# TOP PERFORMERS DATA: /get_top_performers
+@app.route('/get_top_performers', methods=['GET'])
+def get_top_performers():
+    limit = request.args.get('limit', default=10, type=int)
+    data = fetch_top_performers(limit)
+    file_path = 'response/topperformers.json'
+    success, message = update_data_on_github(file_path, data)
+    if success:
+        response = {'success': True, 'message': 'Top performers data updated on GitHub.'}
+    else:
+        response = {'success': False, 'message': f'Failed to update top performers data on GitHub. Error: {message}'}
     return jsonify(response)
 
 if __name__ == '__main__':

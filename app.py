@@ -164,12 +164,33 @@ def get_prospectus():
     pages_str = request.args.get('pages', '1,2,3')
     pages = [int(page) for page in pages_str.split(',')]
     data = scrape_prospectus(pages)
-    file_path = 'response/prospectus.json'
-    success, message = update_data_on_github(file_path, data)
-    if success:
-        return jsonify(data)
-    else:
-        return jsonify({'success': False, 'message': f'Failed to update prospectus data on GitHub. Error: {message}'})
+
+    # Update prospectus.json
+    file_path_prospectus = 'response/prospectus.json'
+    success_prospectus, message_prospectus = update_data_on_github(file_path_prospectus, data)
+
+    if success_prospectus:
+        # Fetch current dataRefresh.json
+        data_refresh_path = 'response/dataRefresh.json'
+        data_refresh = fetch_data_from_github(data_refresh_path)
+
+        if data_refresh:
+            # Update the timestamp for "prospectus" field
+            data_refresh[0]['prospectus'] = int(time.time() * 1000)
+
+            # Update dataRefresh.json on GitHub
+            success_data_refresh, message_data_refresh = update_data_on_github(data_refresh_path, data_refresh)
+
+            if success_data_refresh:
+                return jsonify(data)
+            else:
+                # Rollback prospectus.json if dataRefresh.json update fails
+                rollback_prospectus, rollback_message = update_data_on_github(file_path_prospectus, [])
+                return jsonify({'success': False, 'message': f'Failed to update dataRefresh.json. Error: {message_data_refresh}'})
+        else:
+            return jsonify({'success': False, 'message': 'Failed to fetch dataRefresh.json from GitHub.'})
+
+    return jsonify({'success': False, 'message': f'Failed to update prospectus.json. Error: {message_prospectus}'})
 
 
 # CDSC DATA: /get_cdsc_data all cdsc data

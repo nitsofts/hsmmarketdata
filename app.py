@@ -38,24 +38,6 @@ def update_data_on_github(file_path, data):
     put_response = requests.put(url, headers=headers, json=update_data)
     if put_response.status_code in [200, 201]:
         logging.info(f"Successfully updated {file_path} in repository.")
-
-        # Update dataRefresh.json based on the updated file
-        refresh_data = {
-            'cdscData': dataRefresh['cdscData'],
-            'prospectus': dataRefresh['prospectus'],
-            'topPerformers': dataRefresh['topPerformers'],
-            'lastMessage': 'Data updated successfully'
-        }
-
-        if file_path == 'response/cdscdata.json':
-            refresh_data['cdscData'] = int(time.time() * 1000)
-        elif file_path == 'response/prospectus.json':
-            refresh_data['prospectus'] = int(time.time() * 1000)
-        elif 'response/top' in file_path and file_path.endswith('.json'):
-            refresh_data['topPerformers'] = int(time.time() * 1000)
-
-        update_data_on_github('response/dataRefresh.json', refresh_data)
-
         return True, f'{file_path} updated successfully'
     else:
         logging.error(f"Failed to update {file_path}. Response: {put_response.text}")
@@ -197,17 +179,10 @@ def get_cdsc_data():
     file_path = 'response/cdscdata.json'
     success, message = update_data_on_github(file_path, data)
     if success:
-        return jsonify(data)
+        response = {'success': True, 'message': 'CDSC data updated on GitHub.'}
     else:
         response = {'success': False, 'message': f'Failed to update CDSC data on GitHub. Error: {message}'}
     return jsonify(response)
 
 if __name__ == '__main__':
-    # Assuming you have an initial dataRefresh.json file
-    data_refresh = {
-        'cdscData': 1708426563785,
-        'prospectus': 1708426563785,
-        'topPerformers': 1708426563785,
-        'lastMessage': 'Data updated successfully'
-    }
     app.run(host='0.0.0.0', port=8080)

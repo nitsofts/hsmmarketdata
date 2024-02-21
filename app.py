@@ -245,7 +245,7 @@ def get_cdsc_data():
             success_data_refresh, message_data_refresh = update_data_on_github(file_path_data_refresh, data_refresh)
 
             if success_data_refresh:
-                return jsonify({'success': True, 'message': 'CDSC data updated on GitHub.'})
+                return jsonify(data)
             else:
                 # Rollback cdscdata.json if dataRefresh.json update fails
                 rollback_cdsc_data, rollback_message = update_data_on_github(file_path_cdsc_data, [])

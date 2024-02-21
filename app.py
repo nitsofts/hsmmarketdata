@@ -157,11 +157,11 @@ def get_top_performers():
     data = fetch_and_update_top_performers(limit)
     return jsonify(data)
     
-# Prospectus: /get_prospectus for all 5 pages (1,2,3,4,5)
+# Prospectus: /get_prospectus for all 3 pages (1,2,3)
 # Prospectus: /get_prospectus?pages=1,2 for specific set of pages
 @app.route('/get_prospectus', methods=['GET'])
 def get_prospectus():
-    pages_str = request.args.get('pages', '1,2,3,4,5')
+    pages_str = request.args.get('pages', '1,2,3')
     pages = [int(page) for page in pages_str.split(',')]
     data = scrape_prospectus(pages)
     file_path = 'response/prospectus.json'

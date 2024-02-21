@@ -17,38 +17,7 @@ GITHUB_TOKEN = os.environ.get('GITHUB_TOKEN')  # GitHub API token
 REPO_NAME = 'nitsofts/hsmmarketdata'  # Repository name on GitHub
 BRANCH = 'main'  # Branch to update in the repository
 
-# Function to get current timestamp in milliseconds
-def get_current_timestamp_ms():
-    return int(time.time() * 1000)
-    
 # This function is for writing updated data on github page
-# Function to update dataRefresh.json
-def update_data_refresh(data_type, timestamp, last_message):
-    file_path = 'response/dataRefresh.json'
-    refresh_data = {
-        'cdscData': timestamp if data_type == 'cdsc' else None,
-        'prospectus': timestamp if data_type == 'prospectus' else None,
-        'topPerformers': timestamp if data_type == 'topPerformers' else None,
-        'lastMessage': last_message
-    }
-    
-    try:
-        with open(file_path, 'r') as refresh_file:
-            existing_data = json.load(refresh_file)
-    except FileNotFoundError:
-        existing_data = []
-
-    for item in existing_data:
-        if data_type in item:
-            item[data_type] = timestamp
-            item['lastMessage'] = last_message
-            break
-    else:
-        existing_data.append(refresh_data)
-
-    with open(file_path, 'w') as refresh_file:
-        json.dump(existing_data, refresh_file, indent=2)
-        
 # GitHub Update Functions
 def update_data_on_github(file_path, data):
     url = f'https://api.github.com/repos/{REPO_NAME}/contents/{file_path}'
@@ -74,7 +43,6 @@ def update_data_on_github(file_path, data):
         logging.error(f"Failed to update {file_path}. Response: {put_response.text}")
         return False, put_response.text
 
-
 # ALL FUNCTIONS
 # Function for fetching and writing all TOP PERFORMERS data into github page
 def fetch_and_update_top_performers(limit):
@@ -82,7 +50,7 @@ def fetch_and_update_top_performers(limit):
     all_data = {}
 
     def fetch_market_movers(indicator):
-        current_timestamp = get_current_timestamp_ms()
+        current_timestamp = int(time.time() * 1000)
         url = f"https://nepalipaisa.com/api/GetTopMarketMovers?indicator={indicator}&sectorCode=&limit={limit}&_={current_timestamp}"
         response = requests.get(url)
 
@@ -99,12 +67,7 @@ def fetch_and_update_top_performers(limit):
     for indicator in indicators:
         data = fetch_market_movers(indicator)
         file_path = f'response/top{indicator.capitalize()}.json'
-        timestamp = get_current_timestamp_ms()
         success, message = update_data_on_github(file_path, data)
-        if success:
-            update_data_refresh('topPerformers', timestamp, 'Top Performers data updated successfully')
-        else:
-            update_data_refresh('topPerformers', timestamp, f'Failed to update Top Performers data. Error: {message}')
         all_data[indicator] = {'success': success, 'message': message}
 
     return all_data
@@ -142,67 +105,44 @@ def scrape_prospectus(page_numbers):
                         "fileSize": file_size
                     }
                     combined_data.append(data)
-            file_path = 'response/prospectus.json'
-            timestamp = get_current_timestamp_ms()
-            success, message = update_data_on_github(file_path, combined_data)
-            if success:
-                update_data_refresh('prospectus', timestamp, 'Prospectus data updated successfully')
-            else:
-                update_data_refresh('prospectus', timestamp, f'Failed to update Prospectus data. Error: {message}')
         else:
             logging.error(f"Failed to retrieve page {page_number}. Status code: {response.status_code}")
     return combined_data
 
 # Function for scraping CDSC DATA
 def scrape_cdsc_data():
+    # Define the URL of the website
     url = "https://www.cdsc.com.np/"
 
     # Send an HTTP request to the website with SSL certificate verification disabled
     response = requests.get(url, verify=False)
+    # Parse the HTML content of the website
+    html_content = response.text
+    soup = BeautifulSoup(html_content, "html.parser")
+    # Locate the div containing the "Current Public Issue" information
+    div = soup.find("div", class_="fun-factor-area")
+    # Extract all the "h4" elements from the "fun-custom-column" div
+    h4_elements = div.find_all("h4")
+    # Create a list to store the extracted data in the new format
+    data = []
+    # Define important positions
+    important_positions = [8, 10, 11, 12, 13]
+
+    # Format and add the data to the list
+    for i in range(0, len(h4_elements), 2):
+        imp_value = "true" if int(i/2) in important_positions else "false"
+        item = {
+            "id": str(int(i/2)),  # ID as a string
+            "dataKey": h4_elements[i + 1].text.strip(),
+            "dataValue": h4_elements[i].text.strip(),
+            "imp": imp_value
+        }
+        data.append(item)
+
+    # Sort the data so that items with "imp": "true" are at the top
+    data.sort(key=lambda x: x['imp'], reverse=True)
     
-    timestamp = get_current_timestamp_ms()  # Get current timestamp
-
-    if response.status_code == 200:
-        # Parse the HTML content of the website
-        html_content = response.text
-        soup = BeautifulSoup(html_content, "html.parser")
-        # Locate the div containing the "Current Public Issue" information
-        div = soup.find("div", class_="fun-factor-area")
-        # Extract all the "h4" elements from the "fun-custom-column" div
-        h4_elements = div.find_all("h4")
-        # Create a list to store the extracted data in the new format
-        data = []
-        # Define important positions
-        important_positions = [8, 10, 11, 12, 13]
-
-        # Format and add the data to the list
-        for i in range(0, len(h4_elements), 2):
-            imp_value = "true" if int(i/2) in important_positions else "false"
-            item = {
-                "id": str(int(i/2)),  # ID as a string
-                "dataKey": h4_elements[i + 1].text.strip(),
-                "dataValue": h4_elements[i].text.strip(),
-                "imp": imp_value
-            }
-            data.append(item)
-
-        # Sort the data so that items with "imp": "true" are at the top
-        data.sort(key=lambda x: x['imp'], reverse=True)
-
-        # Update data on GitHub and dataRefresh.json
-        file_path = 'response/cdscdata.json'
-        success, message = update_data_on_github(file_path, data)
-        if success:
-            update_data_refresh('cdsc', timestamp, 'CDSC data updated successfully')
-        else:
-            update_data_refresh('cdsc', timestamp, f'Failed to update CDSC data. Error: {message}')
-    else:
-        logging.error(f"Failed to retrieve CDSC data. Status code: {response.status_code}")
-        update_data_refresh('cdsc', timestamp, f'Failed to retrieve CDSC data. Status code: {response.status_code}')
-        data = []
-
     return data
-
     
 
 # API Endpoints to make requests

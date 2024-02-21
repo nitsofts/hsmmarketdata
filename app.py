@@ -17,6 +17,10 @@ GITHUB_TOKEN = os.environ.get('GITHUB_TOKEN')  # GitHub API token
 REPO_NAME = 'nitsofts/hsmmarketdata'  # Repository name on GitHub
 BRANCH = 'main'  # Branch to update in the repository
 
+# Function to get current timestamp in milliseconds
+def get_current_timestamp_ms():
+    return int(time.time() * 1000)
+
 # This function is for writing updated data on github page
 # GitHub Update Functions
 def update_data_on_github(file_path, data):
@@ -42,6 +46,34 @@ def update_data_on_github(file_path, data):
     else:
         logging.error(f"Failed to update {file_path}. Response: {put_response.text}")
         return False, put_response.text
+
+# Function to update dataRefresh.json
+def update_data_refresh(data_type, timestamp, last_message):
+    file_path = 'response/dataRefresh.json'
+    refresh_data = {
+        'cdscData': timestamp if data_type == 'cdsc' else None,
+        'prospectus': timestamp if data_type == 'prospectus' else None,
+        'topPerformers': timestamp if data_type == 'topPerformers' else None,
+        'lastMessage': last_message
+    }
+    
+    try:
+        with open(file_path, 'r') as refresh_file:
+            existing_data = json.load(refresh_file)
+    except FileNotFoundError:
+        existing_data = []
+
+    for item in existing_data:
+        if data_type in item:
+            item[data_type] = timestamp
+            item['lastMessage'] = last_message
+            break
+    else:
+        existing_data.append(refresh_data)
+
+    with open(file_path, 'w') as refresh_file:
+        json.dump(existing_data, refresh_file, indent=2)
+        
 
 # ALL FUNCTIONS
 # Function for fetching and writing all TOP PERFORMERS data into github page
@@ -155,33 +187,53 @@ def scrape_cdsc_data():
 def get_top_performers():
     limit = request.args.get('limit', default=100, type=int)
     data = fetch_and_update_top_performers(limit)
-    return jsonify(data)
     
+    timestamp = get_current_timestamp_ms()  # Get current timestamp
+
+    file_path = 'response/topPerformers.json'
+    success, message = update_data_on_github(file_path, data)
+    if success:
+        update_data_refresh('topPerformers', timestamp, 'Top Performers data updated successfully')
+        return jsonify(data)
+    else:
+        update_data_refresh('topPerformers', timestamp, f'Failed to update Top Performers data. Error: {message}')
+        return jsonify({'success': False, 'message': f'Failed to update top performers data on GitHub. Error: {message}'})
+
 # Prospectus: /get_prospectus for all 3 pages (1,2,3)
-# Prospectus: /get_prospectus?pages=1,2 for specific set of pages
+# Prospectus: /get_prospectus?pages=1,2 for a specific set of pages
 @app.route('/get_prospectus', methods=['GET'])
 def get_prospectus():
     pages_str = request.args.get('pages', '1,2,3')
     pages = [int(page) for page in pages_str.split(',')]
     data = scrape_prospectus(pages)
+
+    timestamp = get_current_timestamp_ms()  # Get current timestamp
+
     file_path = 'response/prospectus.json'
     success, message = update_data_on_github(file_path, data)
     if success:
+        update_data_refresh('prospectus', timestamp, 'Prospectus data updated successfully')
         return jsonify(data)
     else:
+        update_data_refresh('prospectus', timestamp, f'Failed to update Prospectus data. Error: {message}')
         return jsonify({'success': False, 'message': f'Failed to update prospectus data on GitHub. Error: {message}'})
 
-
-# CDSC DATA: /get_cdsc_data all cdsc data
+# CDSC DATA: /get_cdsc_data all CDSC data
 @app.route('/get_cdsc_data', methods=['GET'])
 def get_cdsc_data():
     data = scrape_cdsc_data()  # You need to define this function
+    
+    timestamp = get_current_timestamp_ms()  # Get current timestamp
+
     file_path = 'response/cdscdata.json'
     success, message = update_data_on_github(file_path, data)
     if success:
+        update_data_refresh('cdsc', timestamp, 'CDSC data updated successfully')
         response = {'success': True, 'message': 'CDSC data updated on GitHub.'}
     else:
+        update_data_refresh('cdsc', timestamp, f'Failed to update CDSC data. Error: {message}')
         response = {'success': False, 'message': f'Failed to update CDSC data on GitHub. Error: {message}'}
+
     return jsonify(response)
 
 if __name__ == '__main__':

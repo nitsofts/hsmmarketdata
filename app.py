@@ -47,16 +47,18 @@ def update_data_on_github(file_path, data):
         logging.error(f"Failed to update {file_path}. Response: {put_response.text}")
         return False, put_response.text
 
-# Function to update dataRefresh.json
 def update_data_refresh(data_type, timestamp, last_message):
     file_path = 'response/dataRefresh.json'
+
     refresh_data = {
-        'cdscData': timestamp if data_type == 'cdsc' else None,
-        'prospectus': timestamp if data_type == 'prospectus' else None,
-        'topPerformers': timestamp if data_type == 'topPerformers' else None,
+        'cdscData': None,
+        'prospectus': None,
+        'topPerformers': None,
         'lastMessage': last_message
     }
-    
+
+    refresh_data[data_type] = timestamp  # Update the specific data type timestamp
+
     try:
         with open(file_path, 'r') as refresh_file:
             existing_data = json.load(refresh_file)

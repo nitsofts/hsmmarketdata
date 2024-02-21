@@ -17,6 +17,19 @@ GITHUB_TOKEN = os.environ.get('GITHUB_TOKEN')  # GitHub API token
 REPO_NAME = 'nitsofts/hsmmarketdata'  # Repository name on GitHub
 BRANCH = 'main'  # Branch to update in the repository
 
+def fetch_data_from_github(file_path):
+    url = f'https://raw.githubusercontent.com/{REPO_NAME}/{BRANCH}/{file_path}'
+    headers = {'Accept': 'application/vnd.github.v3.raw'}
+    response = requests.get(url, headers=headers)
+
+    if response.status_code == 200:
+        data = response.json()
+        return data
+    else:
+        logging.error(f"Failed to fetch {file_path} from GitHub. Status code: {response.status_code}")
+        return None
+
+
 # This function is for writing updated data on github page
 # GitHub Update Functions
 def update_data_on_github(file_path, data):

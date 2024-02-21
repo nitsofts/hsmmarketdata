@@ -170,10 +170,10 @@ def get_prospectus():
     file_path = 'response/prospectus.json'
     success, message = update_data_on_github(file_path, data)
     if success:
-        response = {'success': True, 'message': 'Prospectus data updated on GitHub.'}
+        return jsonify(data)
     else:
-        response = {'success': False, 'message': f'Failed to update prospectus data on GitHub. Error: {message}'}
-    return jsonify(response)
+        return jsonify({'success': False, 'message': f'Failed to update prospectus data on GitHub. Error: {message}'})
+
 
 # CDSC DATA: /get_cdsc_data all cdsc data
 @app.route('/get_cdsc_data', methods=['GET'])

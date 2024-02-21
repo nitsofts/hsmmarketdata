@@ -49,14 +49,24 @@ def update_data_refresh_timestamp(data_type):
     data_refresh_file_path = 'dataRefresh.json'
     try:
         current_timestamp = int(time.time() * 1000)
-        with open(data_refresh_file_path, 'r') as file:
-            data_refresh = json.load(file)
-            data_refresh[data_type] = current_timestamp
-        with open(data_refresh_file_path, 'w') as file:  # Corrected this line
+
+        try:
+            with open(data_refresh_file_path, 'r') as file:
+                data_refresh = json.load(file)
+        except (FileNotFoundError, json.decoder.JSONDecodeError):
+            # If the file doesn't exist or is not a valid JSON, create an empty dictionary
+            data_refresh = {}
+
+        data_refresh[data_type] = current_timestamp
+
+        with open(data_refresh_file_path, 'w') as file:
             json.dump(data_refresh, file, indent=2)
+
         logging.info(f"Successfully updated timestamp for {data_type} in dataRefresh.json.")
     except Exception as e:
         logging.error(f"Failed to update timestamp for {data_type} in dataRefresh.json. Error: {e}")
+
+
 
 
 # Function for fetching and writing all TOP PERFORMERS data into github page

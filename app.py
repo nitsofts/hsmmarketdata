@@ -17,33 +17,6 @@ GITHUB_TOKEN = os.environ.get('GITHUB_TOKEN')  # GitHub API token
 REPO_NAME = 'nitsofts/hsmmarketdata'  # Repository name on GitHub
 BRANCH = 'main'  # Branch to update in the repository
 
-# This function is for writing updated data on github page
-# GitHub Update Functions
-def update_data_on_github(file_path, data):
-    url = f'https://api.github.com/repos/{REPO_NAME}/contents/{file_path}'
-    headers = {
-        'Authorization': f'token {GITHUB_TOKEN}',
-        'Accept': 'application/vnd.github.v3+json'
-    }
-    response = requests.get(url, headers=headers)
-    sha = response.json().get('sha') if response.status_code == 200 else None
-    content = b64encode(json.dumps(data, ensure_ascii=False).encode('utf-8')).decode('utf-8')
-    update_data = {
-        'message': f'Update {file_path}',
-        'content': content,
-        'branch': BRANCH,
-    }
-    if sha:
-        update_data['sha'] = sha
-    put_response = requests.put(url, headers=headers, json=update_data)
-    if put_response.status_code in [200, 201]:
-        logging.info(f"Successfully updated {file_path} in repository.")
-        return True, f'{file_path} updated successfully'
-    else:
-        logging.error(f"Failed to update {file_path}. Response: {put_response.text}")
-        return False, put_response.text
-
-# ALL FUNCTIONS
 # Function for fetching and writing all TOP PERFORMERS data into github page
 def fetch_and_update_top_performers(limit):
     indicators = ['turnover', 'gainers', 'losers', 'sharestraded', 'transactions']
@@ -116,15 +89,20 @@ def scrape_cdsc_data():
 
     # Send an HTTP request to the website with SSL certificate verification disabled
     response = requests.get(url, verify=False)
+
     # Parse the HTML content of the website
     html_content = response.text
     soup = BeautifulSoup(html_content, "html.parser")
+
     # Locate the div containing the "Current Public Issue" information
     div = soup.find("div", class_="fun-factor-area")
+
     # Extract all the "h4" elements from the "fun-custom-column" div
     h4_elements = div.find_all("h4")
+
     # Create a list to store the extracted data in the new format
     data = []
+
     # Define important positions
     important_positions = [8, 10, 11, 12, 13]
 
@@ -143,34 +121,59 @@ def scrape_cdsc_data():
     data.sort(key=lambda x: x['imp'], reverse=True)
     
     return data
-    
 
-# API Endpoints to make requests
-# 1) TOP PERFORMERS
-# 2) PROSPECTS
-# 3) CDSC DATA
 
-# TOP PERFORMERS: /get_top_performers for each 100 items of Top Gainers, Top Losers, Top Turnover, Top Volume, Top Transactions
+# This function is for writing updated data on github page
+# GitHub Update Functions
+def update_data_on_github(file_path, data):
+    url = f'https://api.github.com/repos/{REPO_NAME}/contents/{file_path}'
+    headers = {
+        'Authorization': f'token {GITHUB_TOKEN}',
+        'Accept': 'application/vnd.github.v3+json'
+    }
+    response = requests.get(url, headers=headers)
+    sha = response.json().get('sha') if response.status_code == 200 else None
+    content = b64encode(json.dumps(data, ensure_ascii=False).encode('utf-8')).decode('utf-8')
+    update_data = {
+        'message': f'Update {file_path}',
+        'content': content,
+        'branch': BRANCH,
+    }
+    if sha:
+        update_data['sha'] = sha
+    put_response = requests.put(url, headers=headers, json=update_data)
+    if put_response.status_code in [200, 201]:
+        logging.info(f"Successfully updated {file_path} in repository.")
+        return True, f'{file_path} updated successfully'
+    else:
+        logging.error(f"Failed to update {file_path}. Response: {put_response.text}")
+        return False, put_response.text
+
+
+
+
+# API Endpoints to make requests -
+
 @app.route('/get_top_performers', methods=['GET'])
 def get_top_performers():
     limit = request.args.get('limit', default=100, type=int)
     data = fetch_and_update_top_performers(limit)
     return jsonify(data)
     
-# Prospectus: /get_prospectus for all 3 pages (1,2,3)
+# Prospectus: /get_prospectus for all 5 pages (1,2,3,4,5)
 # Prospectus: /get_prospectus?pages=1,2 for specific set of pages
 @app.route('/get_prospectus', methods=['GET'])
 def get_prospectus():
-    pages_str = request.args.get('pages', '1,2,3')
+    pages_str = request.args.get('pages', '1,2,3,4,5')
     pages = [int(page) for page in pages_str.split(',')]
     data = scrape_prospectus(pages)
     file_path = 'response/prospectus.json'
     success, message = update_data_on_github(file_path, data)
     if success:
-        return jsonify(data)
+        response = {'success': True, 'message': 'Prospectus data updated on GitHub.'}
     else:
-        return jsonify({'success': False, 'message': f'Failed to update prospectus data on GitHub. Error: {message}'})
-
+        response = {'success': False, 'message': f'Failed to update prospectus data on GitHub. Error: {message}'}
+    return jsonify(response)
 
 # CDSC DATA: /get_cdsc_data all cdsc data
 @app.route('/get_cdsc_data', methods=['GET'])

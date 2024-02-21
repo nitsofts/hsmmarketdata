@@ -52,7 +52,7 @@ def update_data_refresh_timestamp(data_type):
         with open(data_refresh_file_path, 'r') as file:
             data_refresh = json.load(file)
             data_refresh[data_type] = current_timestamp
-        with open(data_refresh_file_path, 'w') as file:
+        with open(data_refresh_file_path, 'w') as file:  # Corrected this line
             json.dump(data_refresh, file, indent=2)
         logging.info(f"Successfully updated timestamp for {data_type} in dataRefresh.json.")
     except Exception as e:

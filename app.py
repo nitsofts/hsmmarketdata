@@ -5,7 +5,7 @@ from flask import Flask, jsonify, request
 import os
 import json
 from bs4 import BeautifulSoup
-import time
+import time 
 
 # Basic logging setup for debugging
 logging.basicConfig(level=logging.INFO)
@@ -19,7 +19,7 @@ BRANCH = 'main'  # Branch to update in the repository
 
 # This function is for writing updated data on github page
 # GitHub Update Functions
-def update_data_on_github(file_path, data, data_type):
+def update_data_on_github(file_path, data):
     url = f'https://api.github.com/repos/{REPO_NAME}/contents/{file_path}'
     headers = {
         'Authorization': f'token {GITHUB_TOKEN}',
@@ -38,37 +38,12 @@ def update_data_on_github(file_path, data, data_type):
     put_response = requests.put(url, headers=headers, json=update_data)
     if put_response.status_code in [200, 201]:
         logging.info(f"Successfully updated {file_path} in repository.")
-        update_data_refresh_timestamp(data_type)
-        return True, f'{data_type} updated successfully'
+        return True, f'{file_path} updated successfully'
     else:
         logging.error(f"Failed to update {file_path}. Response: {put_response.text}")
         return False, put_response.text
 
-# Function to update timestamp in dataRefresh.json
-def update_data_refresh_timestamp(data_type):
-    data_refresh_file_path = 'dataRefresh.json'
-    try:
-        current_timestamp = int(time.time() * 1000)
-
-        try:
-            with open(data_refresh_file_path, 'r') as file:
-                data_refresh = json.load(file)
-        except (FileNotFoundError, json.decoder.JSONDecodeError):
-            # If the file doesn't exist or is not a valid JSON, create an empty dictionary
-            data_refresh = {}
-
-        data_refresh[data_type] = current_timestamp
-
-        with open(data_refresh_file_path, 'w') as file:
-            json.dump(data_refresh, file, indent=2)
-
-        logging.info(f"Successfully updated timestamp for {data_type} in dataRefresh.json.")
-    except Exception as e:
-        logging.error(f"Failed to update timestamp for {data_type} in dataRefresh.json. Error: {e}")
-
-
-
-
+# ALL FUNCTIONS
 # Function for fetching and writing all TOP PERFORMERS data into github page
 def fetch_and_update_top_performers(limit):
     indicators = ['turnover', 'gainers', 'losers', 'sharestraded', 'transactions']
@@ -92,15 +67,15 @@ def fetch_and_update_top_performers(limit):
     for indicator in indicators:
         data = fetch_market_movers(indicator)
         file_path = f'response/top{indicator.capitalize()}.json'
-        success, message = update_data_on_github(file_path, data, indicator)
+        success, message = update_data_on_github(file_path, data)
         all_data[indicator] = {'success': success, 'message': message}
 
     return all_data
-
+    
 # Function for scraping PROSPECTUS
 def scrape_prospectus(page_numbers):
     combined_data = []
-
+    
     def get_prospectus_size(url):
         try:
             response = requests.head(url)
@@ -109,7 +84,7 @@ def scrape_prospectus(page_numbers):
             return file_size_mb
         except Exception:
             return "N/A"  # Return "N/A" if size can't be calculated
-
+    
     for page_number in page_numbers:
         url = f"https://www.sebon.gov.np/prospectus?page={page_number}"
         response = requests.get(url)
@@ -141,20 +116,15 @@ def scrape_cdsc_data():
 
     # Send an HTTP request to the website with SSL certificate verification disabled
     response = requests.get(url, verify=False)
-
     # Parse the HTML content of the website
     html_content = response.text
     soup = BeautifulSoup(html_content, "html.parser")
-
     # Locate the div containing the "Current Public Issue" information
     div = soup.find("div", class_="fun-factor-area")
-
     # Extract all the "h4" elements from the "fun-custom-column" div
     h4_elements = div.find_all("h4")
-
     # Create a list to store the extracted data in the new format
     data = []
-
     # Define important positions
     important_positions = [8, 10, 11, 12, 13]
 
@@ -171,17 +141,22 @@ def scrape_cdsc_data():
 
     # Sort the data so that items with "imp": "true" are at the top
     data.sort(key=lambda x: x['imp'], reverse=True)
-
+    
     return data
+    
 
+# API Endpoints to make requests
+# 1) TOP PERFORMERS
+# 2) PROSPECTS
+# 3) CDSC DATA
 
-# API Endpoints to make requests -
+# TOP PERFORMERS: /get_top_performers for each 100 items of Top Gainers, Top Losers, Top Turnover, Top Volume, Top Transactions
 @app.route('/get_top_performers', methods=['GET'])
 def get_top_performers():
     limit = request.args.get('limit', default=100, type=int)
     data = fetch_and_update_top_performers(limit)
     return jsonify(data)
-
+    
 # Prospectus: /get_prospectus for all 5 pages (1,2,3,4,5)
 # Prospectus: /get_prospectus?pages=1,2 for specific set of pages
 @app.route('/get_prospectus', methods=['GET'])
@@ -190,18 +165,19 @@ def get_prospectus():
     pages = [int(page) for page in pages_str.split(',')]
     data = scrape_prospectus(pages)
     file_path = 'response/prospectus.json'
-    success, message = update_data_on_github(file_path, data, 'prospectus')
+    success, message = update_data_on_github(file_path, data)
     if success:
         return jsonify(data)
     else:
         return jsonify({'success': False, 'message': f'Failed to update prospectus data on GitHub. Error: {message}'})
+
 
 # CDSC DATA: /get_cdsc_data all cdsc data
 @app.route('/get_cdsc_data', methods=['GET'])
 def get_cdsc_data():
     data = scrape_cdsc_data()  # You need to define this function
     file_path = 'response/cdscdata.json'
-    success, message = update_data_on_github(file_path, data, 'cdscData')
+    success, message = update_data_on_github(file_path, data)
     if success:
         response = {'success': True, 'message': 'CDSC data updated on GitHub.'}
     else:

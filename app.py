@@ -203,4 +203,11 @@ def get_cdsc_data():
     return jsonify(response)
 
 if __name__ == '__main__':
+    # Assuming you have an initial dataRefresh.json file
+    data_refresh = {
+        'cdscData': 1708426563785,
+        'prospectus': 1708426563785,
+        'topPerformers': 1708426563785,
+        'lastMessage': 'Data updated successfully'
+    }
     app.run(host='0.0.0.0', port=8080)

@@ -168,7 +168,27 @@ def scrape_cdsc_data():
 def get_top_performers():
     limit = request.args.get('limit', default=100, type=int)
     data = fetch_and_update_top_performers(limit)
-    return jsonify(data)
+
+    # Update topPerformers timestamp in dataRefresh.json
+    file_path_data_refresh = 'response/dataRefresh.json'
+    data_refresh = fetch_data_from_github(file_path_data_refresh)
+
+    if data_refresh:
+        # Update the timestamp for "topPerformers" field
+        data_refresh[0]['topPerformers'] = int(time.time() * 1000)
+
+        # Update dataRefresh.json on GitHub
+        success_data_refresh, message_data_refresh = update_data_on_github(file_path_data_refresh, data_refresh)
+
+        if success_data_refresh:
+            return jsonify(data)
+        else:
+            # Rollback topPerformers.json if dataRefresh.json update fails
+            rollback_top_performers, rollback_message = update_data_on_github(file_path_top_performers, [])
+            return jsonify({'success': False, 'message': f'Failed to update dataRefresh.json. Error: {message_data_refresh}'})
+    else:
+        return jsonify({'success': False, 'message': 'Failed to fetch dataRefresh.json from GitHub.'})
+
     
 # Prospectus: /get_prospectus for all 3 pages (1,2,3)
 # Prospectus: /get_prospectus?pages=1,2 for specific set of pages
@@ -206,17 +226,35 @@ def get_prospectus():
     return jsonify({'success': False, 'message': f'Failed to update prospectus.json. Error: {message_prospectus}'})
 
 
-# CDSC DATA: /get_cdsc_data all cdsc data
 @app.route('/get_cdsc_data', methods=['GET'])
 def get_cdsc_data():
     data = scrape_cdsc_data()  # You need to define this function
-    file_path = 'response/cdscdata.json'
-    success, message = update_data_on_github(file_path, data)
-    if success:
-        response = {'success': True, 'message': 'CDSC data updated on GitHub.'}
+    file_path_cdsc_data = 'response/cdscdata.json'
+    success_cdsc_data, message_cdsc_data = update_data_on_github(file_path_cdsc_data, data)
+
+    if success_cdsc_data:
+        # Fetch current dataRefresh.json
+        file_path_data_refresh = 'response/dataRefresh.json'
+        data_refresh = fetch_data_from_github(file_path_data_refresh)
+
+        if data_refresh:
+            # Update the timestamp for "cdscData" field
+            data_refresh[0]['cdscData'] = int(time.time() * 1000)
+
+            # Update dataRefresh.json on GitHub
+            success_data_refresh, message_data_refresh = update_data_on_github(file_path_data_refresh, data_refresh)
+
+            if success_data_refresh:
+                return jsonify({'success': True, 'message': 'CDSC data updated on GitHub.'})
+            else:
+                # Rollback cdscdata.json if dataRefresh.json update fails
+                rollback_cdsc_data, rollback_message = update_data_on_github(file_path_cdsc_data, [])
+                return jsonify({'success': False, 'message': f'Failed to update dataRefresh.json. Error: {message_data_refresh}'})
+        else:
+            return jsonify({'success': False, 'message': 'Failed to fetch dataRefresh.json from GitHub.'})
     else:
-        response = {'success': False, 'message': f'Failed to update CDSC data on GitHub. Error: {message}'}
-    return jsonify(response)
+        return jsonify({'success': False, 'message': f'Failed to update cdscdata.json. Error: {message_cdsc_data}'})
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8080)

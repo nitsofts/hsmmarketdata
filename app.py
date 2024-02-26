@@ -60,9 +60,10 @@ def update_data_on_github(file_path, data):
 
 # ALL FUNCTIONS
 # Function for fetching and writing all TOP PERFORMERS data into github page
-def fetch_and_update_top_performers(limit):
+def fetch_and_update_top_performers(limit, specific_indicator=None):
     indicators = ['turnover', 'gainers', 'losers', 'sharestraded', 'transactions']
     all_data = {}
+    response_data = None  # This will store the response for the specific indicator
 
     def fetch_market_movers(indicator):
         current_timestamp = int(time.time() * 1000)
@@ -72,12 +73,11 @@ def fetch_and_update_top_performers(limit):
         if response.status_code == 200:
             data = response.json()
             result_data = data.get('result', [])  # Extract only the 'result' part
-            # Add 'type' attribute to each item in the result
             for item in result_data:
                 item['type'] = indicator
             return result_data
         else:
-            raise Exception(f"Error: {response.status_code}")
+            raise Exception(f"Error fetching {indicator}: {response.status_code}")
 
     for indicator in indicators:
         data = fetch_market_movers(indicator)
@@ -85,7 +85,10 @@ def fetch_and_update_top_performers(limit):
         success, message = update_data_on_github(file_path, data)
         all_data[indicator] = {'success': success, 'message': message}
 
-    return all_data
+        if indicator == specific_indicator:
+            response_data = data  # Set the response data for the requested indicator
+
+    return all_data, response_data
     
 # Function for scraping PROSPECTUS
 def scrape_prospectus(page_numbers):
@@ -165,31 +168,20 @@ def scrape_cdsc_data():
 # 2) PROSPECTS
 # 3) CDSC DATA
 
-# TOP PERFORMERS: /get_top_performers for each 100 items of Top Gainers, Top Losers, Top Turnover, Top Volume, Top Transactions
 @app.route('/get_top_performers', methods=['GET'])
 def get_top_performers():
     limit = request.args.get('limit', default=100, type=int)
-    data = fetch_and_update_top_performers(limit)
+    indicator = request.args.get('indicator', default=None, type=str)  # Get the specific indicator from request
 
-    # Update topPerformers timestamp in dataRefresh.json
-    file_path_data_refresh = 'response/data_refresh.json'
-    data_refresh = fetch_data_from_github(file_path_data_refresh)
+    if indicator not in ['turnover', 'gainers', 'losers', 'sharestraded', 'transactions']:
+        return jsonify({'success': False, 'message': 'Invalid indicator specified'}), 400
 
-    if data_refresh:
-        # Update the timestamp for "topPerformers" field
-        data_refresh[0]['top_performers'] = int(time.time() * 1000)
+    all_data, response_data = fetch_and_update_top_performers(limit, specific_indicator=indicator)
 
-        # Update dataRefresh.json on GitHub
-        success_data_refresh, message_data_refresh = update_data_on_github(file_path_data_refresh, data_refresh)
-
-        if success_data_refresh:
-            return jsonify(data)
-        else:
-            # Rollback topPerformers.json if dataRefresh.json update fails
-            rollback_top_performers, rollback_message = update_data_on_github(file_path_top_performers, [])
-            return jsonify({'success': False, 'message': f'Failed to update dataRefresh.json. Error: {message_data_refresh}'})
+    if response_data is not None:
+        return jsonify({'data': response_data, 'message': all_data[indicator]['message']}), 200
     else:
-        return jsonify({'success': False, 'message': 'Failed to fetch dataRefresh.json from GitHub.'})
+        return jsonify({'success': False, 'message': 'Failed to fetch data for the specified indicator.'}), 500
 
     
 # Prospectus: /get_prospectus for all 3 pages (1,2,3)

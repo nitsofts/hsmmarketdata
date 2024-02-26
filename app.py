@@ -81,7 +81,7 @@ def fetch_and_update_top_performers(limit):
 
     for indicator in indicators:
         data = fetch_market_movers(indicator)
-        file_path = f'response/top{indicator.capitalize()}.json'
+        file_path = f'response/top_{indicator}.json'
         success, message = update_data_on_github(file_path, data)
         all_data[indicator] = {'success': success, 'message': message}
 
@@ -172,12 +172,12 @@ def get_top_performers():
     data = fetch_and_update_top_performers(limit)
 
     # Update topPerformers timestamp in dataRefresh.json
-    file_path_data_refresh = 'response/dataRefresh.json'
+    file_path_data_refresh = 'response/data_refresh.json'
     data_refresh = fetch_data_from_github(file_path_data_refresh)
 
     if data_refresh:
         # Update the timestamp for "topPerformers" field
-        data_refresh[0]['topPerformers'] = int(time.time() * 1000)
+        data_refresh[0]['top_performers'] = int(time.time() * 1000)
 
         # Update dataRefresh.json on GitHub
         success_data_refresh, message_data_refresh = update_data_on_github(file_path_data_refresh, data_refresh)
@@ -206,7 +206,7 @@ def get_prospectus():
 
     if success_prospectus:
         # Fetch current lastRefresh timestamp from dataRefresh/prospectus.json
-        file_path_timestamp = 'dataRefresh/prospectus.json'
+        file_path_timestamp = 'data_refresh/prospectus.json'
         timestamp_data = fetch_data_from_github(file_path_timestamp)
 
         if timestamp_data:
@@ -226,19 +226,19 @@ def get_prospectus():
                 rollback_prospectus, rollback_message = update_data_on_github(file_path_prospectus, [])
                 return jsonify({'success': False, 'message': f'Failed to update dataRefresh/prospectus.json. Error: {message_timestamp}'})
         else:
-            return jsonify({'success': False, 'message': 'Failed to fetch dataRefresh/prospectus.json from GitHub.'})
+            return jsonify({'success': False, 'message': 'Failed to fetch data_refresh/prospectus.json from GitHub.'})
     return jsonify({'success': False, 'message': f'Failed to update response/prospectus.json. Error: {message_prospectus}'})
 
 
 @app.route('/get_cdsc_data', methods=['GET'])
 def get_cdsc_data():
     data = scrape_cdsc_data()  # You need to define this function
-    file_path_cdsc_data = 'response/cdscData.json'
+    file_path_cdsc_data = 'response/cdsc_data.json'
     success_cdsc_data, message_cdsc_data = update_data_on_github(file_path_cdsc_data, data)
 
     if success_cdsc_data:
         # Fetch current lastRefresh timestamp from dataRefresh/prospectus.json
-        file_path_timestamp = 'dataRefresh/cdscData.json'
+        file_path_timestamp = 'data_refresh/cdsc_data.json'
         timestamp_data = fetch_data_from_github(file_path_timestamp)
         
         if timestamp_data:
@@ -256,12 +256,12 @@ def get_cdsc_data():
             else:
                 # Rollback response/prospectus.json if dataRefresh/prospectus.json update fails
                 rollback_cdscData, rollback_message = update_data_on_github(file_path_prospectus, [])
-                return jsonify({'success': False, 'message': f'Failed to update dataRefresh/cdscData.json. Error: {message_timestamp}'})
+                return jsonify({'success': False, 'message': f'Failed to update data_refresh/cdsc_data.json. Error: {message_timestamp}'})
         else:
-            return jsonify({'success': False, 'message': 'Failed to fetch dataRefresh/cdscData.json from GitHub.'})
+            return jsonify({'success': False, 'message': 'Failed to fetch data_refresh/cdsc_data.json from GitHub.'})
        
     else:
-        return jsonify({'success': False, 'message': f'Failed to update cdscdata.json. Error: {message_cdsc_data}'})
+        return jsonify({'success': False, 'message': f'Failed to update cdsc_data.json. Error: {message_cdsc_data}'})
 
 
 if __name__ == '__main__':

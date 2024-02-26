@@ -6,6 +6,8 @@ import os
 import json
 from bs4 import BeautifulSoup
 import time 
+import pytz
+from datetime import datetime
 
 # Basic logging setup for debugging
 logging.basicConfig(level=logging.INFO)
@@ -210,7 +212,9 @@ def get_prospectus():
         if timestamp_data:
             # Update the lastRefresh timestamp
             timestamp_data[0]['lastRefreshInMs'] = int(time.time() * 1000)
-            timestamp_data[0]['lastRefreshInString'] = time.strftime('%a %d %b %Y %I:%M:%S %p', time.localtime(timestamp_data[0]['lastRefreshInMs'] / 1000))
+            nepal_tz = pytz.timezone('Asia/Kathmandu')
+            nepal_time = datetime.fromtimestamp(timestamp_data[0]['lastRefreshInMs'] / 1000, nepal_tz)
+            timestamp_data[0]['lastRefreshInString'] = nepal_time.strftime('%a %d %b %Y %I:%M:%S %p')
 
             # Update dataRefresh/prospectus.json on GitHub
             success_timestamp, message_timestamp = update_data_on_github(file_path_timestamp, timestamp_data)

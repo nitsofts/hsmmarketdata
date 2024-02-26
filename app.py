@@ -233,29 +233,33 @@ def get_prospectus():
 @app.route('/get_cdsc_data', methods=['GET'])
 def get_cdsc_data():
     data = scrape_cdsc_data()  # You need to define this function
-    file_path_cdsc_data = 'response/cdscdata.json'
+    file_path_cdsc_data = 'response/cdscData.json'
     success_cdsc_data, message_cdsc_data = update_data_on_github(file_path_cdsc_data, data)
 
     if success_cdsc_data:
-        # Fetch current dataRefresh.json
-        file_path_data_refresh = 'response/dataRefresh.json'
-        data_refresh = fetch_data_from_github(file_path_data_refresh)
+        # Fetch current lastRefresh timestamp from dataRefresh/prospectus.json
+        file_path_timestamp = 'dataRefresh/cdscData.json'
+        timestamp_data = fetch_data_from_github(file_path_timestamp)
+        
+        if timestamp_data:
+            # Update the lastRefresh timestamp
+            timestamp_data[0]['lastRefreshInMs'] = int(time.time() * 1000)
+            nepal_tz = pytz.timezone('Asia/Kathmandu')
+            nepal_time = datetime.fromtimestamp(timestamp_data[0]['lastRefreshInMs'] / 1000, nepal_tz)
+            timestamp_data[0]['lastRefreshInString'] = nepal_time.strftime('%a %d %b %Y %I:%M:%S %p')
 
-        if data_refresh:
-            # Update the timestamp for "cdscData" field
-            data_refresh[0]['cdscData'] = int(time.time() * 1000)
+            # Update dataRefresh/prospectus.json on GitHub
+            success_timestamp, message_timestamp = update_data_on_github(file_path_timestamp, timestamp_data)
 
-            # Update dataRefresh.json on GitHub
-            success_data_refresh, message_data_refresh = update_data_on_github(file_path_data_refresh, data_refresh)
-
-            if success_data_refresh:
+            if success_timestamp:
                 return jsonify(data)
             else:
-                # Rollback cdscdata.json if dataRefresh.json update fails
-                rollback_cdsc_data, rollback_message = update_data_on_github(file_path_cdsc_data, [])
-                return jsonify({'success': False, 'message': f'Failed to update dataRefresh.json. Error: {message_data_refresh}'})
+                # Rollback response/prospectus.json if dataRefresh/prospectus.json update fails
+                rollback_cdscData, rollback_message = update_data_on_github(file_path_prospectus, [])
+                return jsonify({'success': False, 'message': f'Failed to update dataRefresh/cdscData.json. Error: {message_timestamp}'})
         else:
-            return jsonify({'success': False, 'message': 'Failed to fetch dataRefresh.json from GitHub.'})
+            return jsonify({'success': False, 'message': 'Failed to fetch dataRefresh/cdscData.json from GitHub.'})
+       
     else:
         return jsonify({'success': False, 'message': f'Failed to update cdscdata.json. Error: {message_cdsc_data}'})
 

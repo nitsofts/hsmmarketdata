@@ -60,35 +60,21 @@ def update_data_on_github(file_path, data):
 
 # ALL FUNCTIONS
 # Function for fetching and writing all TOP PERFORMERS data into github page
-def fetch_and_update_top_performers(limit, specific_indicator=None):
-    indicators = ['turnover', 'gainers', 'losers', 'sharestraded', 'transactions']
-    all_data = {}
-    response_data = None  # This will store the response for the specific indicator
+def fetch_top_performers(limit, specific_indicator):
+    result_data = {}
+    current_timestamp = int(time.time() * 1000)
+    url = f"https://nepalipaisa.com/api/GetTopMarketMovers?indicator={specific_indicator}&sectorCode=&limit={limit}&_={current_timestamp}"
+    response = requests.get(url)
 
-    def fetch_market_movers(indicator):
-        current_timestamp = int(time.time() * 1000)
-        url = f"https://nepalipaisa.com/api/GetTopMarketMovers?indicator={indicator}&sectorCode=&limit={limit}&_={current_timestamp}"
-        response = requests.get(url)
+    if response.status_code == 200:
+        data = response.json()
+        result_data = data.get('result', [])  # Extract only the 'result' part
+        for item in result_data:
+            item['type'] = specific_indicator
+    else:
+        logging.error(f"Error fetching {specific_indicator}: {response.status_code}")
 
-        if response.status_code == 200:
-            data = response.json()
-            result_data = data.get('result', [])  # Extract only the 'result' part
-            for item in result_data:
-                item['type'] = indicator
-            return result_data
-        else:
-            raise Exception(f"Error fetching {indicator}: {response.status_code}")
-
-    for indicator in indicators:
-        data = fetch_market_movers(indicator)
-        file_path = f'response/top_{indicator}.json'
-        success, message = update_data_on_github(file_path, data)
-        all_data[indicator] = {'success': success, 'message': message}
-
-        if indicator == specific_indicator:
-            response_data = data  # Set the response data for the requested indicator
-
-    return all_data, response_data
+    return result_data
     
 # Function for scraping PROSPECTUS
 def scrape_prospectus(page_numbers):
@@ -171,17 +157,22 @@ def scrape_cdsc_data():
 @app.route('/get_top_performers', methods=['GET'])
 def get_top_performers():
     limit = request.args.get('limit', default=100, type=int)
-    indicator = request.args.get('indicator', default=None, type=str)  # Get the specific indicator from request
+    indicator = request.args.get('indicator', default='gainers', type=str)  # Default to 'gainers' if not specified
 
     if indicator not in ['turnover', 'gainers', 'losers', 'sharestraded', 'transactions']:
         return jsonify({'success': False, 'message': 'Invalid indicator specified'}), 400
 
-    all_data, response_data = fetch_and_update_top_performers(limit, specific_indicator=indicator)
+    # Fetch the top performers data
+    data = fetch_top_performers(limit, indicator)
+    
+    # Update the corresponding file on GitHub
+    file_path = f'response/top_{indicator}.json'
+    success, message = update_data_on_github(file_path, data)
 
-    if response_data is not None:
-        return jsonify(response_data), 200
+    if success:
+        return jsonify(data), 200
     else:
-        return jsonify({'success': False, 'message': 'Failed to fetch data for the specified indicator.'}), 500
+        return jsonify({'success': False, 'message': message}), 500
 
     
 # Prospectus: /get_prospectus for all 3 pages (1,2,3)

@@ -179,7 +179,7 @@ def get_top_performers():
     all_data, response_data = fetch_and_update_top_performers(limit, specific_indicator=indicator)
 
     if response_data is not None:
-        return jsonify({'data': response_data, 'message': all_data[indicator]['message']}), 200
+        return jsonify(response_data), 200
     else:
         return jsonify({'success': False, 'message': 'Failed to fetch data for the specified indicator.'}), 500
 

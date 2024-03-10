@@ -382,8 +382,8 @@ def get_cdsc_data():
 @app.route('/get_market_indices', methods=['GET'])
 def get_market_indices():
     indices_type = request.args.get('type', default='all_indices', type=str)
-    data_response_path = f'response/{indices_type}.json'
-    data_refresh_path = f'data_refresh/{indices_type}.json'
+    data_response_path = f'response/market_{indices_type}.json'
+    data_refresh_path = f'data_refresh/market_{indices_type}.json'
 
     # Fetch the data based on the type
     if indices_type in ['indices', 'sub_indices']:

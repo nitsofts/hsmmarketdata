@@ -171,7 +171,7 @@ def get_top_performers():
 
     if success:
         # Fetch current lastRefresh timestamp from data_refresh/top_performers.json
-        file_path_timestamp = 'data_refresh/top_performers.json'
+        file_path_timestamp = f'data_refresh/top_{indicator}.json'
         timestamp_data = fetch_data_from_github(file_path_timestamp)
         
         if timestamp_data:

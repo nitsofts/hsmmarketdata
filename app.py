@@ -8,6 +8,7 @@ from bs4 import BeautifulSoup
 import time 
 import pytz
 from datetime import datetime
+from pyBSDate import convert_AD_to_BS
 
 # Basic logging setup for debugging
 logging.basicConfig(level=logging.INFO)
@@ -157,6 +158,100 @@ def fetch_market_indices(api_endpoint):
         return response.json()['result']
     else:
         return None
+
+def fetch_upcoming_issues(issue_type, limit=20):
+    """
+    Fetches and formats upcoming issue data based on the issue type and limit.
+    Args:
+        issue_type (int): The type value indicating the kind of issue (e.g., IPO, FPO).
+        limit (int): The maximum number of records to fetch.
+
+    Returns:
+        list: A list of dictionaries containing formatted upcoming issue data.
+    """
+    # URL and headers for the request
+    url = "https://www.sharesansar.com/existing-issues"
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36",
+        "Accept": "application/json, text/javascript, */*; q=0.01",
+        "Referer": "https://www.sharesansar.com/existing-issues",
+        "X-Requested-With": "XMLHttpRequest",
+    }
+
+    # Construct the payload for the GET request
+    current_timestamp = int(time.time() * 1000)
+    payload = {
+        "draw": 1,
+        "start": 0,
+        "length": limit,
+        "search[value]": "",
+        "search[regex]": "false",
+        "type": issue_type,
+        "_": current_timestamp,
+    }
+
+    # Send the request
+    response = requests.get(url, headers=headers, params=payload)
+    if response.status_code == 200:
+        data = response.json().get("data", [])
+        formatted_data = []
+        for entry in data:
+            # Extract and format dates
+            opening_date_bs = convert_date_to_bs(entry.get("opening_date"))
+            closing_date_bs = convert_date_to_bs(entry.get("closing_date"))
+            extended_closing_date_bs = convert_date_to_bs(entry.get("final_date"))
+            
+            # Format status
+            status = format_status(entry.get("status"))
+            
+            # Format entry
+            formatted_entry = format_entry(entry, opening_date_bs, closing_date_bs, extended_closing_date_bs, status)
+            formatted_data.append(formatted_entry)
+        return formatted_data
+    else:
+        raise Exception(f"Error fetching data: {response.status_code}")
+
+def convert_date_to_bs(date_str):
+    """Converts a date string from AD to BS."""
+    if not date_str:
+        return "In Progress"
+    ad_date = datetime.strptime(date_str, "%Y-%m-%d")
+    try:
+        bs_date_tuple = convert_AD_to_BS(ad_date.year, ad_date.month, ad_date.day)
+        return datetime(*bs_date_tuple).strftime("%Y-%m-%d")
+    except ValueError:
+        return "Invalid Date"
+
+def format_status(status_code):
+    """Formats the status based on the status code."""
+    status_map = {0: "Open", 1: "Closed", -2: "In Progress"}
+    return status_map.get(status_code, "Unknown")
+
+def format_entry(entry, opening_date_bs, closing_date_bs, extended_closing_date_bs, status):
+    """Formats a single entry with the necessary data."""
+    return {
+        "companyName": entry["company"]["companyname"].split('>')[1].split('<')[0],
+        "companySymbol": entry["company"]["symbol"].split('>')[1].split('<')[0],
+        "units": format_number(entry.get("total_units")),
+        "price": format_number(entry.get("issue_price")),
+        "openingDateAd": entry.get("opening_date", "In Progress"),
+        "closingDateAd": entry.get("closing_date", "In Progress"),
+        "extendedClosingDateAd": entry.get("final_date", "In Progress"),
+        "openingDateBs": opening_date_bs,
+        "closingDateBs": closing_date_bs,
+        "extendedClosingDateBs": extended_closing_date_bs,
+        "listingDate": entry.get("listing_date", ""),
+        "issueManager": entry.get("issue_manager", ""),
+        "status": status,
+    }
+
+def format_number(number_str):
+    """Formats a number string to remove unnecessary decimal places or returns 'N/A'."""
+    try:
+        number = float(number_str)
+        return str(int(number)) if number.is_integer() else str(number)
+    except (TypeError, ValueError):
+        return "N/A"
     
 
 # API Endpoints to make requests
@@ -319,6 +414,70 @@ def get_market_indices():
         return jsonify(data)
     else:
         return jsonify({"error": "Error fetching data"}), 500
+
+
+# Upcoming Issues: /get_upcoming_issues for all types of upcoming issues as default
+# Upcoming Issues: /get_upcoming_issues?type=ipo for upcoming IPO issues
+# Upcoming Issues: /get_upcoming_issues?type=right for upcoming right issues
+# Upcoming Issues: /get_upcoming_issues?type=fpo for upcoming FPO issues
+# Upcoming Issues: /get_upcoming_issues?type=local for upcoming local issues
+# Upcoming Issues: /get_upcoming_issues?type=debenture for upcoming debenture issues
+# Upcoming Issues: /get_upcoming_issues?type=migrant for upcoming migrant issues
+@app.route('/get_upcoming_issues', methods=['GET'])
+def get_upcoming_issues():
+    # Map issue type names to type values used in fetch_data
+    issue_type_map = {
+        'ipo': 1,
+        'right': 3,
+        'fpo': 2,
+        'local': 5,
+        'debenture': 7,
+        'migrant': 8,
+        'all': 'all'
+    }
+
+    issue_type = request.args.get('type', default='all', type=str)
+    limit = request.args.get('limit', default=20, type=int)
+
+    # For 'all', iterate over all issue types except 'all'
+    if issue_type == 'all':
+        all_data = []
+        for key, value in issue_type_map.items():
+            if key != 'all':
+                data = fetch_upcoming_issues(value, limit=limit)
+                for item in data:
+                    item['issueType'] = key
+                all_data.extend(data)
+        data_to_update = all_data
+    else:
+        if issue_type in issue_type_map:
+            type_value = issue_type_map[issue_type]
+            data_to_update = fetch_upcoming_issues(type_value, limit=limit)
+            for item in data_to_update:
+                item['issueType'] = issue_type
+        else:
+            return jsonify({"error": "Invalid type parameter"}), 400
+
+    # Define GitHub paths
+    data_response_path = f'response/upcoming_{issue_type}.json'
+    data_refresh_path = f'data_refresh/upcoming_{issue_type}.json'
+
+    # Update the response file on GitHub
+    success_response, message_response = update_data_on_github(data_response_path, data_to_update)
+    if not success_response:
+        return jsonify({'success': False, 'message': message_response}), 500
+
+    # Update the timestamp in the data_refresh folder
+    timestamp_data = {
+        'lastRefreshInMs': int(time.time() * 1000),
+        'lastRefreshInString': datetime.now().strftime('%a %d %b %Y %I:%M:%S %p')
+    }
+    success_timestamp, message_timestamp = update_data_on_github(data_refresh_path, [timestamp_data])
+    if not success_timestamp:
+        return jsonify({'success': False, 'message': message_timestamp}), 500
+
+    return jsonify(data_to_update)
+
 
 
 if __name__ == '__main__':

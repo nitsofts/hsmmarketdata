@@ -467,14 +467,22 @@ def get_upcoming_issues():
     if not success_response:
         return jsonify({'success': False, 'message': message_response}), 500
 
-    # Update the timestamp in the data_refresh folder
-    timestamp_data = {
-        'lastRefreshInMs': int(time.time() * 1000),
-        'lastRefreshInString': datetime.now().strftime('%a %d %b %Y %I:%M:%S %p')
-    }
-    success_timestamp, message_timestamp = update_data_on_github(data_refresh_path, [timestamp_data])
-    if not success_timestamp:
-        return jsonify({'success': False, 'message': message_timestamp}), 500
+    # Fetch current lastRefresh timestamp from GitHub to maintain consistency
+    timestamp_data = fetch_data_from_github(data_refresh_path)
+    
+    if timestamp_data:
+        # Update the lastRefresh timestamp using the same format
+        timestamp_data[0]['lastRefreshInMs'] = int(time.time() * 1000)
+        nepal_tz = pytz.timezone('Asia/Kathmandu')
+        nepal_time = datetime.fromtimestamp(timestamp_data[0]['lastRefreshInMs'] / 1000, nepal_tz)
+        timestamp_data[0]['lastRefreshInString'] = nepal_time.strftime('%a %d %b %Y %I:%M:%S %p')
+
+        # Update the timestamp file on GitHub
+        success_timestamp, message_timestamp = update_data_on_github(data_refresh_path, timestamp_data)
+        if not success_timestamp:
+            return jsonify({'success': False, 'message': message_timestamp}), 500
+    else:
+        return jsonify({'success': False, 'message': 'Failed to fetch timestamp data from GitHub.'})
 
     return jsonify(data_to_update)
 

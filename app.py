@@ -286,13 +286,15 @@ def get_cdsc_data():
 # Market Indices: /get_market_indices?type=all for both market indices & sub-indices
 @app.route('/get_market_indices', methods=['GET'])
 def get_market_indices():
-    indices_type = request.args.get('type', default='all', type=str)
+    indices_type = request.args.get('type', default='all_indices', type=str)
+    data_response_path = f'response/{indices_type}.json'
+    data_refresh_path = f'data_refresh/{indices_type}.json'
 
-    if indices_type == 'index':
-        data = fetch_market_indices('GetIndexLive')
-    elif indices_type == 'subindex':
-        data = fetch_market_indices('GetSubIndexLive')
-    elif indices_type == 'all':
+    # Fetch the data based on the type
+    if indices_type in ['indices', 'sub_indices']:
+        api_endpoint = 'GetIndexLive' if indices_type == 'indices' else 'GetSubIndexLive'
+        data = fetch_market_indices(api_endpoint)
+    elif indices_type == 'all_indices':
         index_data = fetch_market_indices('GetIndexLive')
         subindex_data = fetch_market_indices('GetSubIndexLive')
         data = index_data + subindex_data if index_data and subindex_data else None
@@ -300,6 +302,20 @@ def get_market_indices():
         return jsonify({"error": "Invalid type parameter"}), 400
 
     if data is not None:
+        # Update the response file
+        success_response, message_response = update_data_on_github(data_response_path, data)
+        if not success_response:
+            return jsonify({'success': False, 'message': message_response}), 500
+        
+        # Update the timestamp in the data_refresh folder
+        timestamp_data = {
+            'lastRefreshInMs': int(time.time() * 1000),
+            'lastRefreshInString': datetime.now(pytz.timezone('Asia/Kathmandu')).strftime('%a %d %b %Y %I:%M:%S %p')
+        }
+        success_timestamp, message_timestamp = update_data_on_github(data_refresh_path, [timestamp_data])
+        if not success_timestamp:
+            return jsonify({'success': False, 'message': message_timestamp}), 500
+
         return jsonify(data)
     else:
         return jsonify({"error": "Error fetching data"}), 500

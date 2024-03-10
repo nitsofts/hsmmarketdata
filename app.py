@@ -147,12 +147,23 @@ def scrape_cdsc_data():
     data.sort(key=lambda x: x['imp'], reverse=True)
     
     return data
+
+def fetch_market_indices(api_endpoint):
+    current_time_ms = int(round(time.time() * 1000))
+    url = f"https://nepalipaisa.com/api/{api_endpoint}?_={current_time_ms}"
+    response = requests.get(url)
+
+    if response.status_code == 200:
+        return response.json()['result']
+    else:
+        return None
     
 
 # API Endpoints to make requests
 # 1) TOP PERFORMERS
 # 2) PROSPECTS
 # 3) CDSC DATA
+# 4) Market Indices
 
 @app.route('/get_top_performers', methods=['GET'])
 def get_top_performers():
@@ -235,6 +246,7 @@ def get_prospectus():
     return jsonify({'success': False, 'message': f'Failed to update response/prospectus.json. Error: {message_prospectus}'})
 
 
+# CDSC Data: /get_cdsc_data
 @app.route('/get_cdsc_data', methods=['GET'])
 def get_cdsc_data():
     data = scrape_cdsc_data()  # You need to define this function
@@ -267,6 +279,30 @@ def get_cdsc_data():
        
     else:
         return jsonify({'success': False, 'message': f'Failed to update cdsc_data.json. Error: {message_cdsc_data}'})
+
+# Market Indices: /get_market_indices for market indices & sub-indices as default
+# Market Indices: /get_market_indices?type=index for market indices
+# Market Indices: /get_market_indices?type=subindex for market sub-indices
+# Market Indices: /get_market_indices?type=all for both market indices & sub-indices
+@app.route('/get_market_indices', methods=['GET'])
+def get_market_indices():
+    indices_type = request.args.get('type', default='all', type=str)
+
+    if indices_type == 'index':
+        data = fetch_market_indices('GetIndexLive')
+    elif indices_type == 'subindex':
+        data = fetch_market_indices('GetSubIndexLive')
+    elif indices_type == 'all':
+        index_data = fetch_market_indices('GetIndexLive')
+        subindex_data = fetch_market_indices('GetSubIndexLive')
+        data = index_data + subindex_data if index_data and subindex_data else None
+    else:
+        return jsonify({"error": "Invalid type parameter"}), 400
+
+    if data is not None:
+        return jsonify(data)
+    else:
+        return jsonify({"error": "Error fetching data"}), 500
 
 
 if __name__ == '__main__':

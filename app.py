@@ -189,9 +189,9 @@ def get_top_performers():
             else:
                 # Rollback response/top_performers.json if dataRefresh/prospectus.json update fails
                 rollback_prospectus, rollback_message = update_data_on_github(file_path_prospectus, [])
-                return jsonify({'success': False, 'message': f'Failed to update data_refresh/top_performers.json. Error: {message_timestamp}'})
+                return jsonify({'success': False, 'message': f'Failed to update data_refresh/top_{indicator}.json. Error: {message_timestamp}'})
         else:
-            return jsonify({'success': False, 'message': 'Failed to fetch data_refresh/prospectus.json from GitHub.'})
+            return jsonify({'success': False, 'message': f'Failed to fetch data_refresh/top_{indicator}.json from GitHub.'})
     else:
         return jsonify({'success': False, 'message': message}), 500
 

@@ -211,47 +211,47 @@ def fetch_upcoming_issues(issue_type, limit=20):
     else:
         raise Exception(f"Error fetching data: {response.status_code}")
 
-def convert_date_to_bs(date_str):
-    """Converts a date string from AD to BS."""
-    if not date_str:
-        return "In Progress"
-    ad_date = datetime.strptime(date_str, "%Y-%m-%d")
-    try:
-        bs_date_tuple = convert_AD_to_BS(ad_date.year, ad_date.month, ad_date.day)
-        return datetime(*bs_date_tuple).strftime("%Y-%m-%d")
-    except ValueError:
-        return "Invalid Date"
+    def convert_date_to_bs(date_str):
+        """Converts a date string from AD to BS."""
+        if not date_str:
+            return "In Progress"
+        ad_date = datetime.strptime(date_str, "%Y-%m-%d")
+        try:
+            bs_date_tuple = convert_AD_to_BS(ad_date.year, ad_date.month, ad_date.day)
+            return datetime(*bs_date_tuple).strftime("%Y-%m-%d")
+        except ValueError:
+            return "Invalid Date"
 
-def format_status(status_code):
-    """Formats the status based on the status code."""
-    status_map = {0: "Open", 1: "Closed", -2: "In Progress"}
-    return status_map.get(status_code, "Unknown")
+    def format_status(status_code):
+        """Formats the status based on the status code."""
+        status_map = {0: "Open", 1: "Closed", -2: "In Progress"}
+        return status_map.get(status_code, "Unknown")
 
-def format_entry(entry, opening_date_bs, closing_date_bs, extended_closing_date_bs, status):
-    """Formats a single entry with the necessary data."""
-    return {
-        "companyName": entry["company"]["companyname"].split('>')[1].split('<')[0],
-        "companySymbol": entry["company"]["symbol"].split('>')[1].split('<')[0],
-        "units": format_number(entry.get("total_units")),
-        "price": format_number(entry.get("issue_price")),
-        "openingDateAd": entry.get("opening_date", "In Progress"),
-        "closingDateAd": entry.get("closing_date", "In Progress"),
-        "extendedClosingDateAd": entry.get("final_date", "In Progress"),
-        "openingDateBs": opening_date_bs,
-        "closingDateBs": closing_date_bs,
-        "extendedClosingDateBs": extended_closing_date_bs,
-        "listingDate": entry.get("listing_date", ""),
-        "issueManager": entry.get("issue_manager", ""),
-        "status": status,
-    }
+    def format_entry(entry, opening_date_bs, closing_date_bs, extended_closing_date_bs, status):
+        """Formats a single entry with the necessary data."""
+        return {
+            "companyName": entry["company"]["companyname"].split('>')[1].split('<')[0],
+            "companySymbol": entry["company"]["symbol"].split('>')[1].split('<')[0],
+            "units": format_number(entry.get("total_units")),
+            "price": format_number(entry.get("issue_price")),
+            "openingDateAd": entry.get("opening_date", "In Progress"),
+            "closingDateAd": entry.get("closing_date", "In Progress"),
+            "extendedClosingDateAd": entry.get("final_date", "In Progress"),
+            "openingDateBs": opening_date_bs,
+            "closingDateBs": closing_date_bs,
+            "extendedClosingDateBs": extended_closing_date_bs,
+            "listingDate": entry.get("listing_date", ""),
+            "issueManager": entry.get("issue_manager", ""),
+            "status": status,
+        }
 
-def format_number(number_str):
-    """Formats a number string to remove unnecessary decimal places or returns 'N/A'."""
-    try:
-        number = float(number_str)
-        return str(int(number)) if number.is_integer() else str(number)
-    except (TypeError, ValueError):
-        return "N/A"
+    def format_number(number_str):
+        """Formats a number string to remove unnecessary decimal places or returns 'N/A'."""
+        try:
+            number = float(number_str)
+            return str(int(number)) if number.is_integer() else str(number)
+        except (TypeError, ValueError):
+            return "N/A"
     
 
 # API Endpoints to make requests

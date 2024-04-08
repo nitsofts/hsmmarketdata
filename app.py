@@ -1,4 +1,5 @@
 import logging
+from functools import wraps
 from base64 import b64encode
 import requests
 from flask import Flask, jsonify, request, abort
@@ -18,6 +19,7 @@ app = Flask(__name__)
 API_KEY = os.environ.get('API_KEY')
 
 def require_apikey(view_function):
+    @wraps(view_function)  # This line is the key addition
     def decorated_function(*args, **kwargs):
         api_key_arg = request.args.get('api_key')
         if api_key_arg and api_key_arg == API_KEY:

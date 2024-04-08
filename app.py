@@ -1,7 +1,7 @@
 import logging
 from base64 import b64encode
 import requests
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, abort
 import os
 import json
 from bs4 import BeautifulSoup
@@ -15,9 +15,16 @@ logging.basicConfig(level=logging.INFO)
 
 app = Flask(__name__)
 
-@app.route('/')
-def home():
-    return "Thanks for visiting! Your IP has been recorded."
+API_KEY = os.environ.get('API_KEY')
+
+def require_apikey(view_function):
+    def decorated_function(*args, **kwargs):
+        api_key_arg = request.args.get('api_key')
+        if api_key_arg and api_key_arg == API_KEY:
+            return view_function(*args, **kwargs)
+        else:
+            abort(401)  # Unauthorized access
+    return decorated_function
 
 # ALL FUNCTIONS
 # Function for fetching and writing all TOP PERFORMERS data into github page
@@ -215,10 +222,16 @@ def fetch_upcoming_issues(issue_type, limit=20):
     
 
 # API Endpoints to make requests
+# 0) Home
 # 1) TOP PERFORMERS
 # 2) PROSPECTS
 # 3) CDSC DATA
 # 4) Market Indices
+
+@app.route('/')
+@require_apikey
+def home():
+    return "Thanks for visiting! Your IP has been recorded."
 
 @app.route('/get_top_performers', methods=['GET'])
 def get_top_performers():
@@ -238,6 +251,7 @@ def get_top_performers():
 # Prospectus: /get_prospectus for all 3 pages (1,2,3)
 # Prospectus: /get_prospectus?pages=1,2 for specific set of pages
 @app.route('/get_prospectus', methods=['GET'])
+@require_apikey
 def get_prospectus():
     try:
         pages_str = request.args.get('pages', '1,2,3')

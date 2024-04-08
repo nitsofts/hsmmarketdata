@@ -15,50 +15,6 @@ logging.basicConfig(level=logging.INFO)
 
 app = Flask(__name__)
 
-# Configuration for GitHub API
-GITHUB_TOKEN = os.environ.get('GITHUB_TOKEN')  # GitHub API token
-REPO_NAME = 'nitsofts/hsmmarketdata'  # Repository name on GitHub
-BRANCH = 'main'  # Branch to update in the repository
-
-def fetch_data_from_github(file_path):
-    url = f'https://raw.githubusercontent.com/{REPO_NAME}/{BRANCH}/{file_path}'
-    headers = {'Accept': 'application/vnd.github.v3.raw'}
-    response = requests.get(url, headers=headers)
-
-    if response.status_code == 200:
-        data = response.json()
-        return data
-    else:
-        logging.error(f"Failed to fetch {file_path} from GitHub. Status code: {response.status_code}")
-        return None
-
-
-# This function is for writing updated data on github page
-# GitHub Update Functions
-def update_data_on_github(file_path, data):
-    url = f'https://api.github.com/repos/{REPO_NAME}/contents/{file_path}'
-    headers = {
-        'Authorization': f'token {GITHUB_TOKEN}',
-        'Accept': 'application/vnd.github.v3+json'
-    }
-    response = requests.get(url, headers=headers)
-    sha = response.json().get('sha') if response.status_code == 200 else None
-    content = b64encode(json.dumps(data, ensure_ascii=False).encode('utf-8')).decode('utf-8')
-    update_data = {
-        'message': f'Update {file_path}',
-        'content': content,
-        'branch': BRANCH,
-    }
-    if sha:
-        update_data['sha'] = sha
-    put_response = requests.put(url, headers=headers, json=update_data)
-    if put_response.status_code in [200, 201]:
-        logging.info(f"Successfully updated {file_path} in repository.")
-        return True, f'{file_path} updated successfully'
-    else:
-        logging.error(f"Failed to update {file_path}. Response: {put_response.text}")
-        return False, put_response.text
-
 # ALL FUNCTIONS
 # Function for fetching and writing all TOP PERFORMERS data into github page
 def fetch_top_performers(limit, specific_indicator):
@@ -267,37 +223,9 @@ def get_top_performers():
 
     if indicator not in ['turnover', 'gainers', 'losers', 'sharestraded', 'transactions']:
         return jsonify({'success': False, 'message': 'Invalid indicator specified'}), 400
-
-    # Fetch the top performers data
-    data = fetch_top_performers(limit, indicator)
     
-    # Update the corresponding file on GitHub
-    file_path = f'response/top_{indicator}.json'
-    success, message = update_data_on_github(file_path, data)
-
     if success:
-        # Fetch current lastRefresh timestamp from data_refresh/top_performers.json
-        file_path_timestamp = f'data_refresh/top_{indicator}.json'
-        timestamp_data = fetch_data_from_github(file_path_timestamp)
-        
-        if timestamp_data:
-            # Update the lastRefresh timestamp
-            timestamp_data[0]['lastRefreshInMs'] = int(time.time() * 1000)
-            nepal_tz = pytz.timezone('Asia/Kathmandu')
-            nepal_time = datetime.fromtimestamp(timestamp_data[0]['lastRefreshInMs'] / 1000, nepal_tz)
-            timestamp_data[0]['lastRefreshInString'] = nepal_time.strftime('%a %d %b %Y %I:%M:%S %p')
-
-            # Update dataRefresh/prospectus.json on GitHub
-            success_timestamp, message_timestamp = update_data_on_github(file_path_timestamp, timestamp_data)
-
-            if success_timestamp:
-                return jsonify(data)
-            else:
-                # Rollback response/top_performers.json if dataRefresh/prospectus.json update fails
-                rollback_prospectus, rollback_message = update_data_on_github(file_path_prospectus, [])
-                return jsonify({'success': False, 'message': f'Failed to update data_refresh/top_{indicator}.json. Error: {message_timestamp}'})
-        else:
-            return jsonify({'success': False, 'message': f'Failed to fetch data_refresh/top_{indicator}.json from GitHub.'})
+        return jsonify(data)
     else:
         return jsonify({'success': False, 'message': message}), 500
 
@@ -311,69 +239,22 @@ def get_prospectus():
     pages = [int(page) for page in pages_str.split(',')]
     data = scrape_prospectus(pages)
 
-    # Update response/prospectus.json
-    file_path_prospectus = 'response/prospectus.json'
-    success_prospectus, message_prospectus = update_data_on_github(file_path_prospectus, data)
 
     if success_prospectus:
-        # Fetch current lastRefresh timestamp from dataRefresh/prospectus.json
-        file_path_timestamp = 'data_refresh/prospectus.json'
-        timestamp_data = fetch_data_from_github(file_path_timestamp)
-
-        if timestamp_data:
-            # Update the lastRefresh timestamp
-            timestamp_data[0]['lastRefreshInMs'] = int(time.time() * 1000)
-            nepal_tz = pytz.timezone('Asia/Kathmandu')
-            nepal_time = datetime.fromtimestamp(timestamp_data[0]['lastRefreshInMs'] / 1000, nepal_tz)
-            timestamp_data[0]['lastRefreshInString'] = nepal_time.strftime('%a %d %b %Y %I:%M:%S %p')
-
-            # Update dataRefresh/prospectus.json on GitHub
-            success_timestamp, message_timestamp = update_data_on_github(file_path_timestamp, timestamp_data)
-
-            if success_timestamp:
-                return jsonify(data)
-            else:
-                # Rollback response/prospectus.json if dataRefresh/prospectus.json update fails
-                rollback_prospectus, rollback_message = update_data_on_github(file_path_prospectus, [])
-                return jsonify({'success': False, 'message': f'Failed to update data_refresh/prospectus.json. Error: {message_timestamp}'})
-        else:
-            return jsonify({'success': False, 'message': 'Failed to fetch data_refresh/prospectus.json from GitHub.'})
-    return jsonify({'success': False, 'message': f'Failed to update response/prospectus.json. Error: {message_prospectus}'})
+        return jsonify(data)
+    else:
+        return jsonify({'success': False, 'message': message}), 500
 
 
 # CDSC Data: /get_cdsc_data
 @app.route('/get_cdsc_data', methods=['GET'])
 def get_cdsc_data():
     data = scrape_cdsc_data()  # You need to define this function
-    file_path_cdsc_data = 'response/cdsc_data.json'
-    success_cdsc_data, message_cdsc_data = update_data_on_github(file_path_cdsc_data, data)
-
+    
     if success_cdsc_data:
-        # Fetch current lastRefresh timestamp from dataRefresh/prospectus.json
-        file_path_timestamp = 'data_refresh/cdsc_data.json'
-        timestamp_data = fetch_data_from_github(file_path_timestamp)
-        
-        if timestamp_data:
-            # Update the lastRefresh timestamp
-            timestamp_data[0]['lastRefreshInMs'] = int(time.time() * 1000)
-            nepal_tz = pytz.timezone('Asia/Kathmandu')
-            nepal_time = datetime.fromtimestamp(timestamp_data[0]['lastRefreshInMs'] / 1000, nepal_tz)
-            timestamp_data[0]['lastRefreshInString'] = nepal_time.strftime('%a %d %b %Y %I:%M:%S %p')
-
-            # Update dataRefresh/prospectus.json on GitHub
-            success_timestamp, message_timestamp = update_data_on_github(file_path_timestamp, timestamp_data)
-
-            if success_timestamp:
-                return jsonify(data)
-            else:
-                # Rollback response/prospectus.json if dataRefresh/prospectus.json update fails
-                rollback_cdscData, rollback_message = update_data_on_github(file_path_prospectus, [])
-                return jsonify({'success': False, 'message': f'Failed to update data_refresh/cdsc_data.json. Error: {message_timestamp}'})
-        else:
-            return jsonify({'success': False, 'message': 'Failed to fetch data_refresh/cdsc_data.json from GitHub.'})
-       
+        return jsonify(data)
     else:
-        return jsonify({'success': False, 'message': f'Failed to update cdsc_data.json. Error: {message_cdsc_data}'})
+        return jsonify({'success': False, 'message': message}), 500
 
 # Market Indices: /get_market_indices for market indices & sub-indices as default
 # Market Indices: /get_market_indices?type=index for market indices
@@ -382,8 +263,7 @@ def get_cdsc_data():
 @app.route('/get_market_indices', methods=['GET'])
 def get_market_indices():
     indices_type = request.args.get('type', default='all_indices', type=str)
-    data_response_path = f'response/market_{indices_type}.json'
-    data_refresh_path = f'data_refresh/market_{indices_type}.json'
+    
 
     # Fetch the data based on the type
     if indices_type in ['indices', 'sub_indices']:
@@ -396,24 +276,10 @@ def get_market_indices():
     else:
         return jsonify({"error": "Invalid type parameter"}), 400
 
-    if data is not None:
-        # Update the response file
-        success_response, message_response = update_data_on_github(data_response_path, data)
         if not success_response:
             return jsonify({'success': False, 'message': message_response}), 500
-        
-        # Update the timestamp in the data_refresh folder
-        timestamp_data = {
-            'lastRefreshInMs': int(time.time() * 1000),
-            'lastRefreshInString': datetime.now(pytz.timezone('Asia/Kathmandu')).strftime('%a %d %b %Y %I:%M:%S %p')
-        }
-        success_timestamp, message_timestamp = update_data_on_github(data_refresh_path, [timestamp_data])
-        if not success_timestamp:
-            return jsonify({'success': False, 'message': message_timestamp}), 500
-
-        return jsonify(data)
-    else:
-        return jsonify({"error": "Error fetching data"}), 500
+        else:
+            return jsonify(data)
 
 
 # Upcoming Issues: /get_upcoming_issues for all types of upcoming issues as default
@@ -452,39 +318,17 @@ def get_upcoming_issues():
     else:
         if issue_type in issue_type_map:
             type_value = issue_type_map[issue_type]
-            data_to_update = fetch_upcoming_issues(type_value, limit=limit)
+            data = fetch_upcoming_issues(type_value, limit=limit)
             for item in data_to_update:
                 item['issueType'] = issue_type
         else:
             return jsonify({"error": "Invalid type parameter"}), 400
 
-    # Define GitHub paths
-    data_response_path = f'response/upcoming_{issue_type}.json'
-    data_refresh_path = f'data_refresh/upcoming_{issue_type}.json'
-
-    # Update the response file on GitHub
-    success_response, message_response = update_data_on_github(data_response_path, data_to_update)
+    
     if not success_response:
         return jsonify({'success': False, 'message': message_response}), 500
-
-    # Fetch current lastRefresh timestamp from GitHub to maintain consistency
-    timestamp_data = fetch_data_from_github(data_refresh_path)
-    
-    if timestamp_data:
-        # Update the lastRefresh timestamp using the same format
-        timestamp_data[0]['lastRefreshInMs'] = int(time.time() * 1000)
-        nepal_tz = pytz.timezone('Asia/Kathmandu')
-        nepal_time = datetime.fromtimestamp(timestamp_data[0]['lastRefreshInMs'] / 1000, nepal_tz)
-        timestamp_data[0]['lastRefreshInString'] = nepal_time.strftime('%a %d %b %Y %I:%M:%S %p')
-
-        # Update the timestamp file on GitHub
-        success_timestamp, message_timestamp = update_data_on_github(data_refresh_path, timestamp_data)
-        if not success_timestamp:
-            return jsonify({'success': False, 'message': message_timestamp}), 500
     else:
-        return jsonify({'success': False, 'message': 'Failed to fetch timestamp data from GitHub.'})
-
-    return jsonify(data_to_update)
+        return jsonify(data)
 
 
 

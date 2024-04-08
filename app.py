@@ -17,17 +17,7 @@ app = Flask(__name__)
 
 @app.route('/')
 def home():
-    # Attempt to get the original requester's IP address from the X-Forwarded-For header
-    if 'X-Forwarded-For' in request.headers:
-        original_ip = request.headers.get('X-Forwarded-For').split(',')[0]  # In case of multiple IPs, get the first one
-    else:
-        original_ip = request.remote_addr  # Fallback to direct IP if header is not present
-    
-    # Log the IP address
-    with open("access_log.txt", "a") as file:
-        file.write(f"{original_ip} accessed at {datetime.now()}\n")
-    
-    return "Access logged."
+    return "Thanks for visiting! Your IP has been recorded."
 
 # ALL FUNCTIONS
 # Function for fetching and writing all TOP PERFORMERS data into github page

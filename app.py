@@ -15,6 +15,14 @@ logging.basicConfig(level=logging.INFO)
 
 app = Flask(__name__)
 
+@app.route('/')
+def home():
+    user_ip = request.remote_addr  # Get the user's IP address
+    # Log the IP address to a file or database
+    with open("access_log.txt", "a") as file:
+        file.write(f"{user_ip} accessed at {datetime.now()}\n")
+    return "Thanks for visiting! Your IP has been recorded."
+
 # ALL FUNCTIONS
 # Function for fetching and writing all TOP PERFORMERS data into github page
 def fetch_top_performers(limit, specific_indicator):

@@ -239,15 +239,15 @@ def get_top_performers():
 # Prospectus: /get_prospectus?pages=1,2 for specific set of pages
 @app.route('/get_prospectus', methods=['GET'])
 def get_prospectus():
-    pages_str = request.args.get('pages', '1,2,3')
-    pages = [int(page) for page in pages_str.split(',')]
-    data = scrape_prospectus(pages)
-
-
-    if success_prospectus:
+    try:
+        pages_str = request.args.get('pages', '1,2,3')
+        pages = [int(page) for page in pages_str.split(',')]
+        data = scrape_prospectus(pages)
         return jsonify(data)
-    else:
-        return jsonify({'success': False, 'message': message}), 500
+    except Exception as e:
+        logging.error(f"An error occurred: {str(e)}")
+        return jsonify({'success': False, 'message': 'Failed to retrieve prospectus data.'}), 500
+
 
 
 # CDSC Data: /get_cdsc_data

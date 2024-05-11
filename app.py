@@ -269,12 +269,13 @@ def get_prospectus():
 # CDSC Data: /get_cdsc_data
 @app.route('/get_cdsc_data', methods=['GET'])
 def get_cdsc_data():
-    data = scrape_cdsc_data()  # You need to define this function
-    
-    if success_cdsc_data:
+    try:
+        data = scrape_cdsc_data()  # Ensure this function handles errors and returns a predictable format
         return jsonify(data)
-    else:
-        return jsonify({'success': False, 'message': message}), 500
+    except Exception as e:
+        # Log the exception and return an error message
+        logging.error(f"An error occurred while fetching CDSC data: {str(e)}")
+        return jsonify({'success': False, 'message': 'Failed to fetch CDSC data.'}), 500
 
 # Market Indices: /get_market_indices for market indices & sub-indices as default
 # Market Indices: /get_market_indices?type=index for market indices

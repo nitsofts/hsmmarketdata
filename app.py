@@ -268,6 +268,7 @@ def get_prospectus():
 
 # CDSC Data: /get_cdsc_data
 @app.route('/get_cdsc_data', methods=['GET'])
+@require_apikey
 def get_cdsc_data():
     try:
         data = scrape_cdsc_data()  # Ensure this function handles errors and returns a predictable format

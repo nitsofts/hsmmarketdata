@@ -1,4 +1,5 @@
 from flask import Blueprint, request, abort
+from config import API_KEY  # Import API_KEY from config.py
 
 home_bp = Blueprint('home', __name__)
 

@@ -3,15 +3,15 @@ from flask import Blueprint, jsonify
 import logging
 import requests
 
-stock_movement_bp = Blueprint('stock_movement', __name__)
+stock_movement_summary_bp = Blueprint('stock_movement', __name__)
 
-@stock_movement_bp.route('/get_stock_movement', methods=['GET'])
+@stock_movement_summary_bp.route('/get_stock_movement_summary', methods=['GET'])
 def get_stock_movement():
     try:
         data = fetch_and_process_data()
         return jsonify(data)
     except Exception as e:
-        logging.error(f"An error occurred while fetching stock movement data: {str(e)}")
+        logging.error(f"An error occurred while fetching stock movement summary data: {str(e)}")
         return jsonify({'success': False, 'message': 'Failed to fetch stock movement data.'}), 500
 
 def fetch_and_process_data():

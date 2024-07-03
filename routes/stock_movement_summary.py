@@ -1,4 +1,3 @@
-
 from flask import Blueprint, jsonify
 import logging
 import requests
@@ -30,14 +29,16 @@ def fetch_and_process_data():
         percentage_change = item.get('percentage_change')
         if percentage_change is None:
             unchanged += 1
-        elif percentage_change > 9.7:
+        elif percentage_change > 9.9:
             positive_circuit += 1
-        elif -10.0 < percentage_change < -9.7:
+        elif -10.0 < percentage_change <= -9.9:
             negative_circuit += 1
         elif percentage_change > 0:
             advanced += 1
         elif percentage_change < 0:
             declined += 1
+        elif percentage_change == 0:
+            unchanged += 1
 
     result = {
         "advanced": advanced,

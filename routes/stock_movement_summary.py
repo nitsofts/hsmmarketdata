@@ -1,6 +1,7 @@
 from flask import Blueprint, jsonify
 import logging
 import requests
+import json  # Import the json module
 
 stock_movement_summary_bp = Blueprint('stock_movement_summary', __name__)
 

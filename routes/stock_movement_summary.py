@@ -9,8 +9,8 @@ stock_movement_summary_bp = Blueprint('stock_movement_summary', __name__)
 def get_stock_movement_summary():
     try:
         data = fetch_and_process_data()
-        # Use json.dumps with sort_keys=False to maintain order
-        return json.dumps(data, sort_keys=False)
+        # Wrap result inside a list before converting to JSON
+        return json.dumps([data], sort_keys=False)
     except Exception as e:
         logging.error(f"An error occurred while fetching stock movement summary data: {str(e)}")
         return jsonify([{'success': False, 'message': 'Failed to fetch stock movement data.'}]), 500

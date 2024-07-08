@@ -1,7 +1,6 @@
 from flask import Blueprint, jsonify
 import logging
 import requests
-import json  # Import the json module
 
 stock_movement_summary_bp = Blueprint('stock_movement_summary', __name__)
 
@@ -9,8 +8,7 @@ stock_movement_summary_bp = Blueprint('stock_movement_summary', __name__)
 def get_stock_movement_summary():
     try:
         data = fetch_and_process_data()
-        # Wrap result inside a list before converting to JSON
-        return json.dumps([data], sort_keys=False)
+        return jsonify(data)
     except Exception as e:
         logging.error(f"An error occurred while fetching stock movement summary data: {str(e)}")
         return jsonify([{'success': False, 'message': 'Failed to fetch stock movement data.'}]), 500
@@ -42,12 +40,12 @@ def fetch_and_process_data():
         elif percentage_change == 0:
             unchanged += 1
 
-    result = {
-        "advanced": advanced,
-        "declined": declined,
-        "unchanged": unchanged,
-        "positiveCircuit": positive_circuit,
-        "negativeCircuit": negative_circuit
-    }
+    result = [
+        {"id": 0, "label": "Advanced", "category": "advanced", "count": advanced},
+        {"id": 1, "label": "Declined", "category": "declined", "count": declined},
+        {"id": 2, "label": "Unchanged", "category": "unchanged", "count": unchanged},
+        {"id": 3, "label": "Positive Circuit", "category": "positiveCircuit", "count": positive_circuit},
+        {"id": 4, "label": "Negative Circuit", "category": "negativeCircuit", "count": negative_circuit}
+    ]
     
     return result

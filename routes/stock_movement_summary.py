@@ -44,8 +44,8 @@ def fetch_and_process_data():
         {"id": 0, "label": "Advanced", "category": "advanced", "count": advanced},
         {"id": 1, "label": "Declined", "category": "declined", "count": declined},
         {"id": 2, "label": "Unchanged", "category": "unchanged", "count": unchanged},
-        {"id": 3, "label": "Positive Circuit", "category": "positiveCircuit", "count": positive_circuit},
-        {"id": 4, "label": "Negative Circuit", "category": "negativeCircuit", "count": negative_circuit}
+        {"id": 3, "label": "P. Circuit", "category": "positiveCircuit", "count": positive_circuit},
+        {"id": 4, "label": "N. Circuit", "category": "negativeCircuit", "count": negative_circuit}
     ]
     
     return result

@@ -34,7 +34,8 @@ def get_market_state():
                 "amount": intrahistory_item.get('amount')
             }
 
-            return jsonify(market_state_data)
+            # Wrap the dictionary in a list
+            return jsonify([market_state_data])
 
         except Exception as e:
             logging.error(f"An error occurred while fetching market state data: {str(e)}")

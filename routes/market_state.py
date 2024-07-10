@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request  # Import request object
 import logging
 import requests
 
@@ -6,7 +6,7 @@ market_state_bp = Blueprint('market_state', __name__)
 
 @market_state_bp.route('/get_market_state', methods=['GET'])
 def get_market_state():
-    type_param = request.args.get('type')
+    type_param = request.args.get('type')  # Access request.args to get 'type' parameter
 
     if type_param == 'market_state_data':
         try:
@@ -15,7 +15,13 @@ def get_market_state():
 
             # Extract relevant data from intrahistory_data for the first item
             intrahistory_item = intrahistory_data[0]
-            additional_data = {
+            market_state_data = {
+                "is_open": market_status_data.get('is_open'),
+                "as_of": market_status_data.get('as_of'),
+                "as_of_live": market_status_data.get('as_of_live'),
+                "as_of_weekly": market_status_data.get('as_of_weekly'),
+                "as_of_hourly": market_status_data.get('as_of_hourly'),
+                "as_of_live_unix": market_status_data.get('as_of_live_unix'),
                 "date": intrahistory_item.get('date'),
                 "symbol": intrahistory_item.get('symbol'),
                 "open": intrahistory_item.get('open'),
@@ -28,8 +34,7 @@ def get_market_state():
                 "amount": intrahistory_item.get('amount')
             }
 
-            market_status_data.update(additional_data)
-            return jsonify(market_status_data)
+            return jsonify(market_state_data)
 
         except Exception as e:
             logging.error(f"An error occurred while fetching market state data: {str(e)}")

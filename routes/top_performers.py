@@ -31,15 +31,22 @@ def fetch_top_performers(limit, specific_indicator):
     
     for indicator in indicators:
         url = f"https://nepalipaisa.com/api/GetTopMarketMovers?indicator={indicator}&sectorCode=&limit={limit}&_={current_timestamp}"
-        response = requests.get(url)
-
-        if response.status_code == 200:
+        try:
+            response = requests.get(url)
+            response.raise_for_status()  # Raise an error for HTTP errors
+            
             data = response.json()
             fetched_data = data.get('result', [])  # Extract only the 'result' part
             for item in fetched_data:
                 item['type'] = indicator
             result_data.extend(fetched_data)  # Combine data from all indicators
-        else:
-            logging.error(f"Error fetching {indicator}: {response.status_code}")
+            
+        except requests.exceptions.HTTPError as http_err:
+            logging.error(f"HTTP error occurred for {indicator}: {http_err}")
+            logging.error(f"Response content: {response.text}")
+        except Exception as err:
+            logging.error(f"Other error occurred for {indicator}: {err}")
+            if response is not None:
+                logging.error(f"Response content: {response.text}")
     
     return result_data

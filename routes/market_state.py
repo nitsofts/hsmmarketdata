@@ -44,7 +44,19 @@ def get_market_state():
     elif type_param == 'market_chart_data':
         try:
             intrahistory_data = fetch_intrahistory_data()
-            return jsonify(intrahistory_data)
+
+            # Filter the data to only include the required fields
+            filtered_data = [
+                {
+                    "id": item.get("id"),
+                    "close": item.get("close"),
+                    "date": item.get("date"),
+                    "symbol": item.get("symbol")
+                }
+                for item in intrahistory_data
+            ]
+
+            return jsonify(filtered_data)
 
         except Exception as e:
             logging.error(f"An error occurred while fetching market chart data: {str(e)}")
@@ -66,7 +78,3 @@ def fetch_intrahistory_data():
     response = requests.get(url)
     response.raise_for_status()
     return response.json()
-
-
-if __name__ == "__main__":
-    app.run(debug=True)

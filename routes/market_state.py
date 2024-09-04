@@ -1,8 +1,20 @@
-from flask import Blueprint, jsonify, request  # Import request object
+from flask import Blueprint, jsonify, request
 import logging
 import requests
+from datetime import datetime
 
 market_state_bp = Blueprint('market_state', __name__)
+
+def format_date(date_string):
+    # Parse the date string and format it as desired
+    try:
+        # Parse the date string into a datetime object
+        date_obj = datetime.fromisoformat(date_string)
+        # Format the datetime object to a string with just the time
+        return date_obj.strftime("%H:%M:%S")
+    except ValueError:
+        # Return the original string if parsing fails
+        return date_string
 
 @market_state_bp.route('/get_market_state', methods=['GET'])
 def get_market_state():
@@ -22,7 +34,7 @@ def get_market_state():
                 "as_of_weekly": market_status_data.get('as_of_weekly'),
                 "as_of_hourly": market_status_data.get('as_of_hourly'),
                 "as_of_live_unix": market_status_data.get('as_of_live_unix'),
-                "date": intrahistory_item.get('date'),
+                "date": format_date(intrahistory_item.get('date')),
                 "symbol": intrahistory_item.get('symbol'),
                 "open": intrahistory_item.get('open'),
                 "high": intrahistory_item.get('high'),
@@ -50,7 +62,7 @@ def get_market_state():
                 {
                     "id": item.get("id"),
                     "close": item.get("close"),
-                    "date": item.get("date"),
+                    "date": format_date(item.get("date")),
                     "symbol": item.get("symbol")
                 }
                 for item in intrahistory_data

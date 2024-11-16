@@ -87,16 +87,7 @@ def get_companies_data():
             if company_symbol in stocks_list:
                 filtered_data.append(company)
 
-        # Check if no data was found for any of the requested symbols
-        missing_symbols = [
-            symbol for symbol in stocks_list if not any(company['symbol'].strip().upper() == symbol for company in filtered_data)
-        ]
-
-        if missing_symbols:
-            return jsonify({
-                "message": f"No data found for the following symbols: {', '.join(missing_symbols)}"
-            }), 404
-
+        # Return only the filtered data
         return jsonify(filtered_data)
 
     except Exception as e:

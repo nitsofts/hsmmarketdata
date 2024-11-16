@@ -70,6 +70,9 @@ def get_companies_data():
         if not all_companies_data:
             return jsonify({"error": "Failed to fetch companies performance data"}), 500
 
+        # Log the full response for debugging
+        logging.info(f"Full fetched data: {all_companies_data}")
+
         # Get 'stocks' query parameter from the request
         stocks_param = request.args.get('stocks', default='all', type=str)
 
@@ -80,13 +83,18 @@ def get_companies_data():
         # Split the stocks parameter and clean up whitespace and case
         stocks_list = [symbol.strip().upper() for symbol in stocks_param.split('&')]
 
-        # Log the filtered stocks list for debugging
+        # Log the stocks list for debugging
         logging.info(f"Filtering data for symbols: {stocks_list}")
 
         # Filter the companies' performance data based on the cleaned symbols
-        filtered_data = [
-            company for company in all_companies_data if company['symbol'].strip().upper() in stocks_list
-        ]
+        filtered_data = []
+        for company in all_companies_data:
+            # Log each symbol and the comparison
+            company_symbol = company['symbol'].strip().upper()
+            for stock in stocks_list:
+                logging.info(f"Comparing: {company_symbol} with {stock}")
+                if company_symbol == stock:
+                    filtered_data.append(company)
 
         # Log the filtered data for debugging
         logging.info(f"Filtered data: {filtered_data}")

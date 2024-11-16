@@ -61,7 +61,7 @@ def get_companies_symbol():
 
 
 # Endpoint to get performance data for specified stocks or all stocks
-@watchlist_bp.route('/watchlist/get_companies_data', methods=['GET'])
+@watchlist_bp.route('/get_companies_data', methods=['GET'])
 def get_companies_data():
     try:
         # Fetch all companies' performance data
@@ -80,10 +80,16 @@ def get_companies_data():
         # Split the stocks parameter and clean up whitespace and case
         stocks_list = [symbol.strip().upper() for symbol in stocks_param.split('&')]
 
+        # Log the filtered stocks list for debugging
+        logging.info(f"Filtering data for symbols: {stocks_list}")
+
         # Filter the companies' performance data based on the cleaned symbols
         filtered_data = [
             company for company in all_companies_data if company['symbol'].strip().upper() in stocks_list
         ]
+
+        # Log the filtered data for debugging
+        logging.info(f"Filtered data: {filtered_data}")
 
         # Check if no data was found for any of the requested symbols
         missing_symbols = [

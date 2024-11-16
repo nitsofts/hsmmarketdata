@@ -6,7 +6,7 @@ import time
 # Blueprint for watchlist data
 watchlist_bp = Blueprint('watchlist', __name__)
 
-# Function to fetch companies' data (name and symbol)
+# Function to fetch companies' data (name, symbol, type, and sector_id)
 def fetch_companies_data():
     current_time_ms = int(round(time.time() * 1000))
     url = f"https://chukul.com/api/data/symbol/?_={current_time_ms}"  # Replace with the actual endpoint to get company data
@@ -16,12 +16,14 @@ def fetch_companies_data():
         companies = response.json()
         company_list = []
 
-        # Extract only the company name and symbol
+        # Extract company name, symbol, type, and sector_id
         for company in companies:
-            if "symbol" in company and "name" in company:
+            if "symbol" in company and "name" in company and "type" in company and "sector_id" in company:
                 company_data = {
                     "symbol": company["symbol"],
-                    "name": company["name"]
+                    "name": company["name"],
+                    "type": company["type"],         # Added "type"
+                    "sector_id": company["sector_id"]  # Added "sector_id"
                 }
                 company_list.append(company_data)
 
@@ -29,7 +31,7 @@ def fetch_companies_data():
     else:
         return None
 
-# New endpoint to get list of companies (name and symbol)
+# New endpoint to get list of companies (name, symbol, type, and sector_id)
 @watchlist_bp.route('/get_companies', methods=['GET'])
 def get_companies():
     try:
@@ -43,5 +45,3 @@ def get_companies():
     except Exception as e:
         logging.error(f"An error occurred while fetching companies data: {str(e)}")
         return jsonify({'success': False, 'message': 'Failed to fetch companies data.'}), 500
-
-

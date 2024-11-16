@@ -6,10 +6,10 @@ import time
 # Blueprint for watchlist data
 watchlist_bp = Blueprint('watchlist', __name__)
 
-# Function to fetch companies' data (name, symbol, type, and sector_id)
-def fetch_companies_data():
+# Function to fetch symbol data (symbol, name, type, sector_id)
+def fetch_symbol_data():
     current_time_ms = int(round(time.time() * 1000))
-    url = f"https://chukul.com/api/data/symbol/?_={current_time_ms}"  # Replace with the actual endpoint to get company data
+    url = f"https://chukul.com/api/data/symbol/?_={current_time_ms}"  # Endpoint for symbol data
     response = requests.get(url)
 
     if response.status_code == 200:
@@ -22,8 +22,8 @@ def fetch_companies_data():
                 company_data = {
                     "symbol": company["symbol"],
                     "name": company["name"],
-                    "type": company["type"],         # Added "type"
-                    "sector_id": company["sector_id"]  # Added "sector_id"
+                    "type": company["type"],
+                    "sector_id": company["sector_id"]
                 }
                 company_list.append(company_data)
 
@@ -31,10 +31,11 @@ def fetch_companies_data():
     else:
         return None
 
-# Function to fetch companies' performance data (open, close, volume, etc.)
-def fetch_companies_data():
+
+# Function to fetch performance data (open, close, volume, etc.)
+def fetch_performance_data():
     current_time_ms = int(round(time.time() * 1000))
-    url = f"https://chukul.com/api/data/intrahistorydata/performance/?type=stock&_={current_time_ms}"
+    url = f"https://chukul.com/api/data/intrahistorydata/performance/?type=stock&_={current_time_ms}"  # Endpoint for performance data
     response = requests.get(url)
 
     if response.status_code == 200:
@@ -43,13 +44,13 @@ def fetch_companies_data():
         return None
 
 
-# New endpoint to get list of companies (name, symbol, type, and sector_id)
-@watchlist_bp.route('/watchlist/get_companies_symbol', methods=['GET'])
-def get_companies():
+# Endpoint to get basic company data (symbol, name, type, sector_id)
+@watchlist_bp.route('/get_companies_symbol', methods=['GET'])
+def get_companies_symbol():
     try:
         # Fetch the list of companies from the external API
-        companies_data = fetch_companies_data()
-        
+        companies_data = fetch_symbol_data()
+
         if companies_data:
             return jsonify(companies_data)
         else:
@@ -59,13 +60,13 @@ def get_companies():
         return jsonify({'success': False, 'message': 'Failed to fetch companies data.'}), 500
 
 
-# New endpoint to get performance data for specified stocks or all stocks
+# Endpoint to get performance data for specified stocks or all stocks
 @watchlist_bp.route('/get_companies_data', methods=['GET'])
 def get_companies_data():
     try:
         # Fetch all companies' performance data
-        all_companies_data = fetch_companies_data()
-        
+        all_companies_data = fetch_performance_data()
+
         if not all_companies_data:
             return jsonify({"error": "Failed to fetch companies performance data"}), 500
 
@@ -88,7 +89,7 @@ def get_companies_data():
         missing_symbols = [
             symbol for symbol in stocks_list if not any(company['symbol'].strip().upper() == symbol for company in filtered_data)
         ]
-        
+
         if missing_symbols:
             return jsonify({
                 "message": f"No data found for the following symbols: {', '.join(missing_symbols)}"

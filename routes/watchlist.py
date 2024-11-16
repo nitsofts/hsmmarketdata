@@ -60,7 +60,7 @@ def get_companies():
 
 
 # New endpoint to get performance data for specified stocks or all stocks
-@watchlist_bp.route('/watchlist/get_companies_data', methods=['GET'])
+@watchlist_bp.route('/get_companies_data', methods=['GET'])
 def get_companies_data():
     try:
         # Fetch all companies' performance data
@@ -76,11 +76,23 @@ def get_companies_data():
         if stocks_param == 'all' or not stocks_param:
             return jsonify(all_companies_data)
 
-        # If 'stocks' is provided, filter the data based on the given symbols
-        stocks_list = stocks_param.split('&')  # Split the symbols by '&'
+        # Split the stocks parameter and clean up whitespace and case
+        stocks_list = [symbol.strip().upper() for symbol in stocks_param.split('&')]
 
-        # Filter the companies' performance data based on the provided symbols
-        filtered_data = [company for company in all_companies_data if company['symbol'] in stocks_list]
+        # Filter the companies' performance data based on the cleaned symbols
+        filtered_data = [
+            company for company in all_companies_data if company['symbol'].strip().upper() in stocks_list
+        ]
+
+        # Check if no data was found for any of the requested symbols
+        missing_symbols = [
+            symbol for symbol in stocks_list if not any(company['symbol'].strip().upper() == symbol for company in filtered_data)
+        ]
+        
+        if missing_symbols:
+            return jsonify({
+                "message": f"No data found for the following symbols: {', '.join(missing_symbols)}"
+            }), 404
 
         return jsonify(filtered_data)
 

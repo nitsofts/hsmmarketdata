@@ -61,7 +61,7 @@ def get_companies_symbol():
 
 
 # Endpoint to get performance data for specified stocks or all stocks
-@watchlist_bp.route('/get_companies_data', methods=['GET'])
+@watchlist_bp.route('/watchlist/get_companies_data', methods=['GET'])
 def get_companies_data():
     try:
         # Fetch all companies' performance data

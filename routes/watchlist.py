@@ -68,10 +68,10 @@ def get_companies_symbol():
             if not performance_data:
                 return jsonify({"error": "Failed to fetch performance data"}), 500
 
-            # Fetch all symbols from the performance data
-            performance_symbols = [company['symbol'].strip().upper() for company in performance_data]
+            # Create a set of symbols from the performance data for faster lookup
+            performance_symbols = set(company['symbol'].strip().upper() for company in performance_data)
 
-            # Filter the symbol data to include only those present in performance data
+            # Filter the symbol data to include only those present in performance data using the set for faster lookups
             filtered_companies_data = [
                 company for company in companies_data
                 if company['symbol'].strip().upper() in performance_symbols
@@ -82,7 +82,6 @@ def get_companies_symbol():
     except Exception as e:
         logging.error(f"An error occurred while fetching companies data: {str(e)}")
         return jsonify({'success': False, 'message': 'Failed to fetch companies data.'}), 500
-
 
 # Endpoint to get performance data for specified stocks or all stocks
 @watchlist_bp.route('/watchlist/get_companies_data', methods=['GET'])

@@ -32,7 +32,7 @@ def fetch_companies_data():
         return None
 
 # New endpoint to get list of companies (name, symbol, type, and sector_id)
-@watchlist_bp.route('/get_companies', methods=['GET'])
+@watchlist_bp.route('/watchlist/get_companies_symbol', methods=['GET'])
 def get_companies():
     try:
         # Fetch the list of companies from the external API

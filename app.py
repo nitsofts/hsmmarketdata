@@ -23,8 +23,8 @@ app.register_blueprint(cdsc_data_bp)
 app.register_blueprint(market_indices_bp)
 app.register_blueprint(upcoming_issues_bp)
 app.register_blueprint(stock_movement_summary_bp)
-app.register_blueprint(market_state_bp)
-app.register_blueprint(watchlist_bp, url_prefix='/api')  # Register watchlist blueprint with '/api' prefix
+app.register_blueprint(market_state_bp, url_prefix='/api')
+app.register_blueprint(watchlist_bp, url_prefix='/api')
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8080)

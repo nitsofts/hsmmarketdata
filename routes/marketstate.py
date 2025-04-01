@@ -15,13 +15,13 @@ def format_date(date_string):
         return date_string
 
 # Unified endpoint for market data
-@marketstate_bp.route('/get_market_data', methods=['POST'])
+@marketstate_bp.route('marketstate/get_market_data', methods=['POST'])
 def get_market_data():
     try:
         data = request.get_json()
         type_param = data.get('type') if data else None
 
-        if type_param == 'market_state_data':
+        if type_param == 'state_data':
             market_status_data = fetch_market_status_data()
             intrahistory_data = fetch_intrahistory_data()
             intrahistory_item = intrahistory_data[0]
@@ -47,7 +47,7 @@ def get_market_data():
 
             return jsonify([market_state_data])
 
-        elif type_param == 'market_chart_data':
+        elif type_param == 'chart_data':
             intrahistory_data = fetch_intrahistory_data()
             filtered_data = [
                 {

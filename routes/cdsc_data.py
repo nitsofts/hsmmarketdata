@@ -7,7 +7,7 @@ import time
 
 cdsc_data_bp = Blueprint('cdsc_data', __name__)
 
-API_KEY = os.getenv('CDSC_API_KEY')  # Set this in Render.com env vars
+API_KEY = os.getenv('API_KEY')  # Set this in Render.com env vars
 
 # --- Basic Rate Limiter (in-memory) ---
 REQUEST_LOG = {}

@@ -1,5 +1,7 @@
-import logging
 from flask import Flask
+from flask_cors import CORS  # Add this
+import logging
+
 from config import API_KEY
 from routes.home import home_bp
 from routes.top_performers import top_performers_bp
@@ -14,6 +16,9 @@ from routes.watchlist import watchlist_bp
 logging.basicConfig(level=logging.INFO)
 
 app = Flask(__name__)
+
+# ✅ Enable CORS
+CORS(app, resources={r"/api/*": {"origins": "*"}})  # Or set a specific origin like "https://hamrosharemarket.com"
 
 # Register all blueprints
 app.register_blueprint(home_bp)

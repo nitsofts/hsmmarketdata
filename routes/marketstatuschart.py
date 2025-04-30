@@ -3,7 +3,7 @@ import logging
 import requests
 from datetime import datetime
 
-market_bp = Blueprint('market', __name__)
+marketstatuschart_bp = Blueprint('marketstatuschart', __name__)
 
 API_KEY = "your_super_secret_key"  # Replace with your real key
 

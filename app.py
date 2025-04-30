@@ -10,7 +10,7 @@ from routes.cdsc_data import cdsc_data_bp
 from routes.market_indices import market_indices_bp
 from routes.upcoming_issues import upcoming_issues_bp
 from routes.stock_movement_summary import stock_movement_summary_bp
-from routes.marketstatuschart import marketstatuschart_bp
+from routes.market_status_chart import market_status_chart_bp
 from routes.watchlist import watchlist_bp
 
 logging.basicConfig(level=logging.INFO)
@@ -28,7 +28,7 @@ app.register_blueprint(cdsc_data_bp)
 app.register_blueprint(market_indices_bp)
 app.register_blueprint(upcoming_issues_bp)
 app.register_blueprint(stock_movement_summary_bp)
-app.register_blueprint(marketstatuschart_bp, url_prefix='/api')
+app.register_blueprint(market_status_chart_bp, url_prefix='/api')
 app.register_blueprint(watchlist_bp, url_prefix='/api')
 
 if __name__ == '__main__':

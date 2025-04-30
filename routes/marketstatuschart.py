@@ -5,8 +5,7 @@ from datetime import datetime
 
 marketstatuschart_bp = Blueprint('marketstatuschart', __name__)
 
-API_KEY = "your_super_secret_key"  # Replace with your real key
-
+API_KEY = os.getenv('API_KEY')  # Set this in Render.com env vars
 
 def is_authenticated(req):
     header_key = req.headers.get('x-api-key')

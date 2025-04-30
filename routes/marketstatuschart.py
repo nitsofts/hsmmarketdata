@@ -20,7 +20,7 @@ def format_date(date_string):
         return date_string
 
 
-@marketstatuschart_bp.route('/api/v1/market/status', methods=['GET'])
+@marketstatuschart_bp.route('/v1/market/status', methods=['GET'])
 def market_status():
     if not is_authenticated(request):
         return jsonify({"success": False, "message": "Unauthorized. Invalid API Key."}), 401
@@ -32,7 +32,7 @@ def market_status():
         return jsonify({"success": False, "message": "Failed to fetch market status."}), 500
 
 
-@marketstatuschart_bp.route('/api/v1/market/chart', methods=['GET'])
+@marketstatuschart_bp.route('/v1/market/chart', methods=['GET'])
 def market_chart():
     if not is_authenticated(request):
         return jsonify({"success": False, "message": "Unauthorized. Invalid API Key."}), 401

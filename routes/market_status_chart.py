@@ -3,7 +3,7 @@ import logging
 import requests
 from datetime import datetime
 
-marketstatuschart_bp = Blueprint('marketstatuschart', __name__)
+market_status_chart_bp = Blueprint('market_status_chart', __name__)
 
 API_KEY = os.getenv('API_KEY')  # Set this in Render.com env vars
 
@@ -20,7 +20,7 @@ def format_date(date_string):
         return date_string
 
 
-@marketstatuschart_bp.route('/v1/market/status', methods=['GET'])
+@market_status_chart_bp.route('/v1/market/status', methods=['GET'])
 def market_status():
     if not is_authenticated(request):
         return jsonify({"success": False, "message": "Unauthorized. Invalid API Key."}), 401
@@ -32,7 +32,7 @@ def market_status():
         return jsonify({"success": False, "message": "Failed to fetch market status."}), 500
 
 
-@marketstatuschart_bp.route('/v1/market/chart', methods=['GET'])
+@market_status_chart_bp.route('/v1/market/chart', methods=['GET'])
 def market_chart():
     if not is_authenticated(request):
         return jsonify({"success": False, "message": "Unauthorized. Invalid API Key."}), 401

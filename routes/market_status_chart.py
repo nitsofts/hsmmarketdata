@@ -1,7 +1,9 @@
 from flask import Blueprint, jsonify, request
 import logging
 import requests
+import os
 from datetime import datetime
+
 
 market_status_chart_bp = Blueprint('market_status_chart', __name__)
 

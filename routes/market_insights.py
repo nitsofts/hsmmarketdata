@@ -6,16 +6,16 @@ import logging
 # Blueprint setup
 market_insights_bp = Blueprint('market_insights', __name__)
 
-# Load secure API key from environment
+# Load secure API key from environment (e.g., "light")
 API_KEY = os.getenv('API_KEY')
 
 # --- Helper Functions ---
 
 def is_authenticated(req):
-    """Validate API key via header or query param."""
+    """Validate API key using disguised 'view-mode' header or fallback query param."""
     return (
-        req.headers.get('x-api-key') == API_KEY or
-        req.args.get('api_key') == API_KEY
+        req.headers.get('view-mode') == API_KEY or
+        req.args.get('view-mode') == API_KEY
     )
 
 def fetch_market_status_data():
@@ -29,13 +29,19 @@ def fetch_market_status_data():
 
 @market_insights_bp.route('/v1/market/insights/status', methods=['GET'])
 def market_open_status():
-    """Return whether market is open, as a single-item list."""
+    """Return market open status and last updated time in milliseconds."""
     if not is_authenticated(request):
-        return jsonify([{ "error": "Unauthorized. Invalid API Key." }]), 401
+        return jsonify([{ "error": "Unauthorized. Invalid Key." }]), 401
 
     try:
         data = fetch_market_status_data()
-        return jsonify([{ "is_open": data.get("is_open", False) }])
+        is_open = data.get("is_open", False)
+        last_updated_unix = data.get("as_of_live_unix", 0)
+
+        return jsonify([{
+            "marketOpen": is_open,
+            "lastUpdated": int(last_updated_unix * 1000)  # convert to ms
+        }])
     except Exception as e:
         logging.error(f"[Market Insights: Status] {e}")
         return jsonify([{ "error": "Unable to fetch market status." }]), 500

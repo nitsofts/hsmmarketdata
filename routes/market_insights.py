@@ -68,3 +68,25 @@ def get_index_list():
         logging.error(f"[Market Insights: Index] {e}")
         return jsonify([{ "error": "Unable to fetch index data." }]), 500
 
+# --- Route Insights > Sub Index  ---
+@market_insights_bp.route('/v1/market/insights/subindex', methods=['GET'])
+def get_subindex_list():
+    """Return list of sub-index stats (e.g., Banking, Hydro, Finance)."""
+    if not is_authenticated(request):
+        return jsonify([{ "error": "Unauthorized. Invalid Key." }]), 401
+
+    try:
+        timestamp = int(time.time() * 1000)
+        url = f"https://nepalipaisa.com/api/GetSubIndexLive?_={timestamp}"
+        response = requests.get(url)
+        response.raise_for_status()
+        data = response.json()
+
+        subindex_list = data.get("result", [])
+        return jsonify(subindex_list)
+
+    except Exception as e:
+        logging.error(f"[Market Insights: SubIndex] {e}")
+        return jsonify([{ "error": "Unable to fetch sub-index data." }]), 500
+
+

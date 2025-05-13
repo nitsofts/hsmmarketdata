@@ -4,7 +4,7 @@ import os
 import requests
 import logging
 
-auto_poster_bp = Blueprint('auto_poster', __name__)
+auto_post_bp = Blueprint('auto_post', __name__)
 API_KEY = os.getenv('API_KEY')
 
 # --- Authentication Helper ---
@@ -23,7 +23,7 @@ def fetch_nepse_summary():
     return response.json().get("result", {})
 
 # --- Route: NEPSE Close Summary ---
-@auto_poster_bp.route('/v2/post/nepse/close', methods=['GET'])
+@auto_post_bp.route('/v2/post/nepse/close', methods=['GET'])
 def nepse_close_summary():
     """Return cleaned and structured NEPSE close summary for auto-post."""
     if not is_authenticated(request):
